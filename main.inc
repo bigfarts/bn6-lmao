@@ -1,0 +1,12 @@
+.include "common.inc"
+.defineregion 0x08800000,0x00800000,0xFF
+.include "chips/chaoslord.inc"
+.include "chips/rollarrow.inc"
+.include "chips/searchman.inc"
+.include "chips/laserman.inc"
+.include "chips/jealousy.inc"
+.include "chips/signalred.inc"
+.include "chips/folderback.inc"
+.include "audio.inc"
+.include "chips/deathphoenix.inc"
+.include "text.inc"

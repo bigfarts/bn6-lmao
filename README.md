@@ -1,0 +1,149 @@
+# bn6 lmao
+
+## Changes
+
+### RollArrow
+
+Replaces TrainArrow1, TrainArrow2, and TrainArrow3 with Blue Moon's RollArrow
+attack. Roll fires one arrow straight down the user's row, and the arrow
+destroys opposing chips on hit. The A/F/T, D/R/W, and Q/Y/Z code sets,
+50/70/90 power, menu art, Roll actor, and arrow graphics are imported from
+Blue Moon in both versions. The original summon and firing sound effects are
+also imported intact.
+
+### SearchMan
+
+Replaces CircusMan, CircusMan EX, and CircusMan SP with the complete SearchMan
+chip attack ported from Battle Network 5.
+
+- `SerchMan S/*`: 20 damage per shot
+- `SerchMnEX S`: 40 damage per shot
+- `SerchMnSP S`: 75 damage per shot
+
+### LaserMan
+
+Replaces HeatMan, HeatMan EX, and HeatMan SP with Blue Moon's LaserMan. The
+summoned Navi raises his arms, points forward, and fires Blue Moon's piercing
+blue-white laser through the complete row.
+
+- `LaserMan L/*`: 100 damage
+- `LaserMnEX L`: 150 damage
+- `LaserMnSP L`: 200 damage
+
+Holding a direction while LaserMan raises his arms enables Blue Moon's command
+effect on Base, EX, and SP:
+
+- Up resets Attack, Rapid, and Charge to level 1.
+- Down disables SuperArmor, AirShoes, FloatShoes, Undershirt, and B+Left abilities.
+- Right restores the standard charge shot in place of a modified charge shot.
+- Left reduces the target's next Custom Screen selection by one chip (minimum two).
+
+All three are Null-element MegaChips. Base uses Blue Moon's base art palette,
+EX preserves every base LaserMan foreground color while changing only the five
+red-background palette entries to green, and SP uses the native yellow-background
+Blue Moon SP palette. All three use LaserMan's base battle palette.
+
+### ChaosLrd
+
+Replaces BigHook with the BN5 ChaosLrd attack. Bass, Ball Bass, the fireball,
+Nebula Gray apparition, white-flash impact, and teardown sprites are ported from
+BN5. The chip is Null element, code S, and has 500 displayed power. Gregar
+uses ChaosLrd menu art; Falzar intentionally retains its original slot art.
+
+### Jealousy
+
+Replaces LifeSync with the complete BN5 Jealousy attack. It is a 60 MB,
+Null-element StandardChip in code J with 80 displayed power. For each chip
+loaded by the opponent, Jealousy produces one 80-damage full-field pulse, then
+runs BN5's chip-delete overlay and cleanup sequence. Its icon, library art, palette, and
+delete-overlay graphics are imported from BN5 in both versions.
+
+### SignalRed
+
+Replaces BugRSword with the complete Blue Moon SignalRed behavior. The 100-HP
+traffic light appears on the panel in front of the user, disables the opposing
+side's BattleChip use for 420 red frames, opens a 50-frame green window, and
+repeats until destroyed. It is a 61 MB Cursor-element GigaChip in code S.
+Both versions import the Blue Moon battle sprite; only Gregar replaces the
+BugRSword menu icon, library art, and palette, while Falzar keeps its original
+slot art. Its placement cue imports Blue Moon's original sample and sequence;
+the green-light cue uses its matching BN6 sound,
+and the light is registered as a normal deployable so DustCross can suck it in
+with B+Left.
+
+### DethPhnx
+
+Replaces CrossDiv with BN5 DeathPhoenix in both versions. The phoenix attacks
+with twelve fireballs and then replays the last used Navi chip, matching BN5's
+recycle tail. Falzar imports the DeathPhoenix icon, library art, and palette;
+Gregar deliberately keeps CrossDiv's original menu art.
+
+### FoldrBak
+
+Replaces the dormant Falzar Giga chip with BN3 FolderBack in both versions.
+It restores every used chip to the user's equipped Folder, including
+FolderBack itself, clears the current hand, reshuffles through BN6's native
+Folder setup, and immediately reopens Custom. A consumed Regular Chip returns
+as an ordinary chip rather than regaining its Regular designation. The ending
+ports BN3's SFX 0x120 rumble, 0x46-frame shake and alternating white flash,
+then shows a full Custom Gauge for 20 frames before the native Custom window
+opens with its normal sound. Its wildcard code, 99 MB cost, icon,
+center-cropped library art, palette, name, and description come from BN3 Blue.
+
+## Assets and palettes
+
+The build extracts RollArrow's three menu-art variants, Roll actor and
+heart-arrow archives, summon and firing samples, LaserMan's menu art, palettes,
+shared actor/beam archive, SignalRed's battle sprite, and Gregar-only SignalRed
+menu art from Blue Moon, Jealousy's menu/overlay graphics, FolderBack's BN3
+menu art and original rumble PCM, plus the full BN5
+SearchMan actor archive, both scope/reticle archives, the chip icon, and the
+56x48 library artwork. The SearchMan variant library-art palettes are:
+
+- base: BN5 base palette (blue background)
+- EX: unchanged SearchMan foreground with a custom yellow background
+- SP: BN5 SP palette (red/pink background)
+
+Base, EX, and SP all select the same in-battle actor palette. The three menu
+art palettes remain distinct.
+
+The first 13 nontransparent palette entries used for SearchMan's foreground
+are byte-identical in all three variants. Only the three background entries
+differ.
+
+See [DISASSEMBLY.md](DISASSEMBLY.md) for the native BN5 object chain and BN6
+hook locations.
+
+## Build
+
+Requirements: `armips`, Python 3, and optionally `flips` for BPS output.
+
+Pass the five source ROM paths in BN5, Gregar, Falzar, Blue Moon, BN3 Blue
+order:
+
+```sh
+./build.sh /path/to/bn5.srl /path/to/bn6-gregar.srl /path/to/bn6-falzar.srl /path/to/bn4-blue-moon.srl /path/to/bn3-blue.srl
+```
+
+Supported source SHA-256 hashes:
+
+- BN5 Team ProtoMan: `b35f5890f54784c9d90a896dc5ac4831d43acc9f94e8c42816742fcfa6b41a7b`
+- BN6 Gregar: `572e113eeb53bb29cd9ff8acb9db265cfd48c5e509c8d0e6420b58e71e442cf2`
+- BN6 Falzar: `a37c1028adb72082b51e142321fa437967bc54b6f46730a53f6581ad455ad670`
+- BN4 Blue Moon: `63ea187c792f4bfcd077f92c3a509fa09ed422993aee9480c39dfdf6a561c5c1`
+- BN3 Blue: `8c6767788f99dc9e2af0c9d75513b227c7c42d6d452d6165c8e08850af78e273`
+
+Patched ROM copies are written under `build/`. If `flips` is available, BPS
+patches are written under `dist/`. If `tango-patch` is also available, the two
+BPS payloads are packaged together as `bn6_lmao-1.0.0.tangopatch`. The
+supplied source ROMs are never modified.
+
+## Text archives
+
+BN6 splits chip names and descriptions into an earlier 256-entry archive for
+IDs `0x000`-`0x0FF` and a later archive beginning at ID `0x100`. The Python
+builder reads and relocates all four archives (two names and two descriptions),
+addresses replacements by full chip ID, and repoints every known consumer.
+This permits readable name or description replacements in either half without
+overwriting Jealousy, LaserMan, SearchMan, ChaosLrd, SignalRed, FolderBack, or
+untouched entries.
