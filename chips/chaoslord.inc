@@ -94,7 +94,7 @@ ChaosTimeFreezeSpawn:
     mov r0,r5
     pop {r1-r3,r5}
     cmp r0,0
-    beq @@done
+    beq ChaosTimeFreezeSpawnDone
     strb r1,[r0,0x12]
     strb r2,[r0,0x13]
     strb r3,[r0,0x0E]
@@ -102,11 +102,14 @@ ChaosTimeFreezeSpawn:
     strh r1,[r0,0x16]
     str r6,[r0,0x2C]
     // BN5 keeps the time-freeze completion pointer at +0x48. +0x40 is
-    // independently used for the controller's horizontal velocity.
+    // independently used for the controller's horizontal velocity. The
+    // pointed-to flag is a word in BN5 but only a byte in BN6; a word store
+    // corrupts the adjacent cut-in state when Invis precedes ChaosLord.
     str r7,[r0,0x48]
     mov r1,1
-    str r1,[r7]
-@@done:
+ChaosSetCompletionActive:
+    strb r1,[r7]
+ChaosTimeFreezeSpawnDone:
     pop {pc}
     .pool
 
@@ -148,7 +151,8 @@ ChaosControllerDestroy:
     bl ChaosBallRequestDestroy
     mov r0,0
     ldr r1,[r5,0x48]
-    str r0,[r1]
+ChaosReleaseCompletion:
+    strb r0,[r1]
     EngineCall OBJECT_FREE
     pop {pc}
     .pool

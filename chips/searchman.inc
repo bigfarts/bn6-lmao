@@ -813,6 +813,12 @@ SearchManHitSpawn:
 
 SearchManHitMain:
     ldr r0,[r5,0x78]
+    ldr r1,=ROLLARROW_PROJECTILE_TAG
+    cmp r0,r1
+    bne @@laser
+    ldr r0,=RollArrowProjectileMain + 1
+    bx r0
+@@laser:
     ldr r1,=0x4C484954                  // LaserMan's tagged type-3 row hit
     cmp r0,r1
     bne @@searchman

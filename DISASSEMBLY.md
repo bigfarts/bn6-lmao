@@ -345,6 +345,11 @@ one pixel above her actor Y origin, and 36 pixels in Z. After firing, Roll stays
 on her panel for the native animation-0 and animation-4 holds, then disappears;
 there is no horizontal retreat.
 
+The port keeps the heart-arrow in type-3, matching Blue Moon and BN6's
+counter-hit ownership path. It shares SearchMan's otherwise-free type-3 slot
+`0x2C` through the `RARW` tag. Hosting the collision-bearing arrow in a
+type-1 slot works for ordinary damage but corrupts the native counter response.
+
 The earlier `0x080C8644` group-`0x08`/index-`0x0D` trace was KendoMan, and
 the paired group-`0x0C`/index-`0x35` object was unrelated. Neither is used by
 this port.

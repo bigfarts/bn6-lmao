@@ -144,7 +144,6 @@ def verify_version(
         verify(u32(output, pointer_offset) == symbol(target) + 1, f"{label} {target} dispatch")
     for pointer_offset, target in (
         (0x3DE8, "RollArrowActorMain"),
-        (0x3E00, "RollArrowProjectileMain"),
         (0x2CDA0, "DeathPhoenixTimeFreezeSpawn"),
         (0x3CA0, "DeathPhoenixMain"),
         (0x44CC, "DeathStrikeMain"),
@@ -182,7 +181,7 @@ def verify_version(
         ),
         f"{label} FolderBack type-1 proxy table",
     )
-    verify(output[0x3E04:0x3E08] == original[0x3E04:0x3E08], f"{label} unused RollArrow hit slot")
+    verify(output[0x3E00:0x3E08] == original[0x3E00:0x3E08], f"{label} unused RollArrow type-1 slots")
     verify(output[0x3D70:0x3D78] == original[0x3D70:0x3D78], f"{label} native type-1 projectile slots")
     native_callback = 0xC4C12 if label == "Falzar" else 0xC6482
     verify(output[native_callback:native_callback + 10] == original[native_callback:native_callback + 10], f"{label} native player projectile callback")
@@ -729,11 +728,23 @@ def verify_version(
     verify(roll_code and any(byte != 0xFF for byte in roll_code), f"{label} RollArrow code")
     verify(laser_code and any(byte != 0xFF for byte in laser_code), f"{label} LaserMan code")
     verify(struct.pack("<I", symbol("RollArrowTimeFreezeSpawn") + 1) in search_code, f"{label} RollArrow time-freeze route")
+    verify(struct.pack("<I", symbol("RollArrowProjectileMain") + 1) in search_code, f"{label} RollArrow tagged type-3 route")
+    verify(struct.pack("<I", symbol("ROLLARROW_PROJECTILE_TAG")) in search_code, f"{label} RollArrow type-3 tag")
     verify(
         b"\x01\xB4\x30\x1C\x00\x0C\x94\x28\x01\xBC" in search_code,
         f"{label} RollArrow packed-attack discriminator",
     )
     verify(chaos_code and any(byte != 0xFF for byte in chaos_code), f"{label} ChaosLrd code")
+    verify(
+        output[rom_offset(symbol("ChaosSetCompletionActive")):rom_offset(symbol("ChaosSetCompletionActive")) + 2]
+        == b"\x39\x70",
+        f"{label} ChaosLrd sets the BN6 completion byte without corrupting cut-in state",
+    )
+    verify(
+        output[rom_offset(symbol("ChaosReleaseCompletion")):rom_offset(symbol("ChaosReleaseCompletion")) + 2]
+        == b"\x08\x70",
+        f"{label} ChaosLrd releases only the BN6 completion byte",
+    )
     verify(jealousy_code and any(byte != 0xFF for byte in jealousy_code), f"{label} Jealousy code")
     verify(bugchain_code and any(byte != 0xFF for byte in bugchain_code), f"{label} BugChain code")
     for target in (0x080005CD, 0x0802D247):
@@ -962,7 +973,7 @@ def verify_version(
             verify(allocated[index - 1][1] <= start, f"{label} autoregion overlap: {allocated[index - 1][2]} / {name}")
 
     allowed_ranges = [
-        interval(0x3DE8, 4), interval(0x3E00, 4), interval(0x31F68, 8),
+        interval(0x3DE8, 4), interval(0x31F68, 8),
         interval(ROLLARROW_RECORDS, 3 * 0x2C),
         interval(0x2CD64, 4), interval(0x3D5C, 4), interval(0x31F58, 4),
         interval(LASERMAN_RECORDS, 3 * 0x2C),
