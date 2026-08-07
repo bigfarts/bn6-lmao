@@ -21,7 +21,8 @@ BN6_EN_CHARSET = (
 CHAR_TO_BYTE = {character: index for index, character in enumerate(BN6_EN_CHARSET)}
 # BN6's English ampersand glyph is at charset index 0xA3. The compact
 # leading-character table above intentionally omits the intervening Japanese
-# glyphs, so map the one punctuation mark used by BN3 FolderBack explicitly.
+# glyphs, so map the punctuation used by imported descriptions explicitly.
+CHAR_TO_BYTE["!"] = 0xA2
 CHAR_TO_BYTE["&"] = 0xA3
 
 NAME_END = 0xE6
@@ -57,6 +58,9 @@ CHIP_NAMES = {
     0x019: encode_name("RollAro2"),
     0x01A: encode_name("RollAro3"),
     0x0BE: encode_name("BugChain"),
+    # Verbatim BN4 English name. The source game and BN6 both allow eight
+    # visible characters, so the final "e" is intentionally absent.
+    0x0B0: encode_name("BugCharg"),
     0x0BF: encode_name("Jealousy"),
     0x0E3: encode_name("LaserMan"),
     0x0E4: encode_name("LaserMn[EX]"),
@@ -76,6 +80,8 @@ CHIP_DESCRIPTIONS = {
     0x01A: encode_description("RollArrow", "destroys", "chips"),
     # Verbatim Blue Moon BugChain description (chip ID 0x0D3).
     0x0BE: encode_description("Fires", "bugs into", "enmy area"),
+    # Verbatim BN4 BugCharge description (chip ID 0x136).
+    0x0B0: encode_description("EvilChip!", "Gets powr", "with turn"),
     0x0BF: encode_description("More dmg", "if enemy", "has chip"),
     0x0E3: encode_description("A laser", "pierces", "1 thru"),
     0x0E4: encode_description("A laser", "pierces", "1 thru"),

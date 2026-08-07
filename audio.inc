@@ -1,7 +1,8 @@
 // Relocate the complete native BN6 song table through its last entry 0x1D9,
 // then populate 0x1DA with SignalRed, append RollArrow's two exact BN4 cues
 // at 0x1DB/0x1DC, LaserMan's exact BN4 firing cue at 0x1DD, and BN3's
-// FolderBack rumble at 0x1DE, and BugChain's aura cue at 0x1DF. Every
+// FolderBack rumble at 0x1DE, BugChain's aura cue at 0x1DF, and BugCharge's
+// Gospel-shot cue at 0x1E0. Every
 // imported cue uses the relocated table.
 .if FALZAR
     .definelabel SONG_TABLE_REFERENCE_0, 0x0814E94C
@@ -44,5 +45,7 @@ RelocatedSongTable:
     .dh 0x001B,0x001B
     .dw BugChainSoundSong
     .dh 0x001C,0x001C
+    .dw BugChargeFireSong
+    .dh 0x0008,0x0008
 RelocatedSongTableEnd:
 .endautoregion

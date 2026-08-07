@@ -121,6 +121,13 @@ dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-sound-sample.bin" bs=1 skip=$
 dd if="$BN6_GREGAR_ROM" of="$BUILD_DIR/bugchain-group10-table-gregar.bin" bs=1 skip=$((0x31FA4)) count=$((0x170)) 2>/dev/null
 dd if="$BN6_FALZAR_ROM" of="$BUILD_DIR/bugchain-group10-table-falzar.bin" bs=1 skip=$((0x31FA4)) count=$((0x170)) 2>/dev/null
 
+# BugCharge replaces BugFix while retaining its StandardChip class and library
+# slot. Import the exact BN4 menu art and group-0x0C/index-0x09 Gospel shot.
+dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugcharge-icon.bin" bs=1 skip=$((0x74716C)) count=$((0x80)) 2>/dev/null
+dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugcharge-image.bin" bs=1 skip=$((0x73BDEC)) count=$((0x540)) 2>/dev/null
+dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugcharge-palette.bin" bs=1 skip=$((0x73FB8C)) count=$((0x20)) 2>/dev/null
+dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugcharge-projectile-sprite.bin" bs=1 skip=$((0x35683C)) count=$((0xCEC)) 2>/dev/null
+
 # RollArrow1/2/3 replace TrainArrow1/2/3 in both versions. Runtime tracing in
 # Blue Moon identifies Roll as group 0x08/index 0x01 and the heart-arrow as
 # group 0x0C/index 0x10. Both archives are stored uncompressed in the ROM.
@@ -148,7 +155,7 @@ dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/laserman-battle-sprite.bin" bs=1 skip=
 # Exact Blue Moon SFX 0x103 sample header plus its complete PCM body.
 dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/laserman-fire-sample.bin" bs=1 skip=$((0x1BCFF8)) count=$((0x144E)) 2>/dev/null
 
-# Relocate BN6's complete song table so all five imported cues can be appended
+# Relocate BN6's complete song table so all imported cues can be appended
 # without overwriting native SFX slots.
 dd if="$BN6_GREGAR_ROM" of="$BUILD_DIR/song-table-gregar.bin" bs=1 skip=$((0x159F48)) count=$((0xED0)) 2>/dev/null
 dd if="$BN6_FALZAR_ROM" of="$BUILD_DIR/song-table-falzar.bin" bs=1 skip=$((0x1583F8)) count=$((0xED0)) 2>/dev/null

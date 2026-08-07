@@ -189,7 +189,9 @@ The exact Blue Moon menu assets are relocated from icon `0x74626C` (`0x80`
 bytes), image `0x7315EC` (`0x540` bytes), and palette `0x73F1AC` (`0x20`
 bytes). The aura archive is `0x380CA4`-`0x381C30` (`0xF8C` bytes). Because
 BN6 has no free sprite pointer, its complete 92-entry group-`0x10` table is
-relocated unchanged and the aura is appended at index `0x5C`.
+relocated and the aura is appended at index `0x5C`. The relocated copy also
+reapplies the imported ChaosLrd, SearchMan-reticle, and SignalRed pointers;
+otherwise moving the table root would bypass their patches in the old table.
 
 ## SignalRed port
 

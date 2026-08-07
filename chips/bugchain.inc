@@ -36,7 +36,9 @@
 
 // BN6's group-0x10 table has 92 entries and no free pointer. Relocate the
 // complete version-specific table and append Blue Moon's BugChain aura at the
-// new index 0x5C, leaving every native entry byte-for-byte intact.
+// new index 0x5C. Reapply the imported archives already installed in this
+// table by ChaosLord, SearchMan, and SignalRed; copying the source-ROM table
+// verbatim here would silently bypass their patches after this pointer moves.
 .org SPRITE_GROUP10_TABLE_POINTER
 .dw BugChainGroup10Table
 
@@ -336,7 +338,16 @@ BugChainSoundAudioEnd:
 .autoregion
 .align 4
 BugChainGroup10Table:
-.incbin "build/bugchain-group10-table.bin"
+.incbin "build/bugchain-group10-table.bin",0,0x10
+.dw ChaosTeardownSprite                    // index 0x04
+.incbin "build/bugchain-group10-table.bin",0x14,0x3C
+.dw SearchManReticleAltSprite              // index 0x14
+.dw SearchManReticleSprite                 // index 0x15
+.incbin "build/bugchain-group10-table.bin",0x58,0x08
+.dw ChaosApparitionSprite                  // index 0x18
+.incbin "build/bugchain-group10-table.bin",0x64,0x14
+.dw SignalRedBattleSprite                  // index 0x1E
+.incbin "build/bugchain-group10-table.bin",0x7C,0xF4
 .dw BugChainBattleSprite
 BugChainGroup10TableEnd:
 .endautoregion

@@ -17,6 +17,7 @@ ROLLARROW_RECORDS = CHIP_DATA_OFFSET + 0x018 * 0x2C
 LASERMAN_RECORDS = CHIP_DATA_OFFSET + 0x0E3 * 0x2C
 SEARCHMAN_RECORDS = CHIP_DATA_OFFSET + 0x107 * 0x2C
 BUGCHAIN_RECORD = CHIP_DATA_OFFSET + 0x0BE * 0x2C
+BUGCHARGE_RECORD = CHIP_DATA_OFFSET + 0x0B0 * 0x2C
 JEALOUSY_RECORD = CHIP_DATA_OFFSET + 0x0BF * 0x2C
 BASS_RECORD = CHIP_DATA_OFFSET + 0x12D * 0x2C
 CHAOSLORD_RECORD = CHIP_DATA_OFFSET + 0x12E * 0x2C
@@ -133,6 +134,8 @@ def verify_version(
         (0x2CCD0, "JealousyTimeFreezeSpawn"),
         (0x2CD3C, "BugChainTimeFreezeSpawn"),
         (0x4438, "BugChainSharedMain"),
+        (0x2CD1C, "BugChargeTimeFreezeSpawn"),
+        (0x43B4, "BugChargeSharedMain"),
         (0x2CD4C, "SignalRedTimeFreezeSpawn"),
         (0x2CD40, "FolderBackSpawn"),
         (0x44D8, "FolderBackSharedMain"),
@@ -154,9 +157,18 @@ def verify_version(
     )
     verify(u32(output, 0x31CD4) == symbol("BugChainGroup10Table"), f"{label} expanded group-0x10 table pointer")
     bugchain_group10_table = rom_offset(symbol("BugChainGroup10Table"))
+    expected_group10_table = bytearray(original[0x31FA4:0x32114])
+    for index, target in (
+        (0x04, "ChaosTeardownSprite"),
+        (0x14, "SearchManReticleAltSprite"),
+        (0x15, "SearchManReticleSprite"),
+        (0x18, "ChaosApparitionSprite"),
+        (0x1E, "SignalRedBattleSprite"),
+    ):
+        struct.pack_into("<I", expected_group10_table, index * 4, symbol(target))
     verify(
-        output[bugchain_group10_table:bugchain_group10_table + 0x170] == original[0x31FA4:0x32114],
-        f"{label} native group-0x10 sprite pointers",
+        output[bugchain_group10_table:bugchain_group10_table + 0x170] == expected_group10_table,
+        f"{label} relocated group-0x10 sprite pointers retain all imported archives",
     )
     verify(
         u32(output, bugchain_group10_table + 0x170) == symbol("BugChainBattleSprite"),
@@ -195,6 +207,7 @@ def verify_version(
     verify(u32(output, 0x32170) == symbol("DeathPhoenixStrikeSprite"), f"{label} DeathPhoenix strike pointer")
     verify(u32(output, 0x31F68) == symbol("RollArrowActorSprite"), f"{label} Roll actor pointer")
     verify(u32(output, 0x31F6C) == symbol("RollArrowProjectileSprite"), f"{label} RollArrow pointer")
+    verify(u32(output, 0x31E80) == symbol("BugChargeProjectileSprite"), f"{label} BugCharge Gospel-shot pointer")
     verify(output[0x31DF4:0x31DF8] == original[0x31DF4:0x31DF8], f"{label} live BN6 sprite slot")
 
     # Both text-archive halves are independently relocated and every known ROM
@@ -362,6 +375,15 @@ def verify_version(
     for target, source_offset, length, description in bugchain_assets:
         start = rom_offset(symbol(target))
         verify(output[start:start + length] == bn4[source_offset:source_offset + length], f"{label} {description}")
+    bugcharge_assets = [
+        ("BugChargeIcon", 0x74716C, 0x80, "BugCharge icon"),
+        ("BugChargeImage", 0x73BDEC, 0x540, "BugCharge image"),
+        ("BugChargePalette", 0x73FB8C, 0x20, "BugCharge palette"),
+        ("BugChargeProjectileSprite", 0x35683C, 0xCEC, "BugCharge Gospel-shot archive"),
+    ]
+    for target, source_offset, length, description in bugcharge_assets:
+        start = rom_offset(symbol(target))
+        verify(output[start:start + length] == bn4[source_offset:source_offset + length], f"{label} {description}")
     laserman_assets = [
         ("LaserManIcon", 0x74676C, 0x80, "LaserMan icon"),
         ("LaserManImage", 0x73842C, 0x540, "LaserMan image"),
@@ -420,6 +442,18 @@ def verify_version(
         == bytes((0x31, 0x13, 0x14, 0x16, 0x24, 0x19, 0x18, 0x1A, 0x63, 0xFF)),
         f"{label} complete BN6 BugFix byte-property list",
     )
+
+    bugcharge_record = output[BUGCHARGE_RECORD:BUGCHARGE_RECORD + 0x2C]
+    verify(bugcharge_record[:4] == b"\x02\xFF\xFF\xFF", f"{label} BugCharge C code")
+    verify(bugcharge_record[4:8] == b"\x00\x04\x0A\x00", f"{label} BugCharge rarity/element/Standard class")
+    verify(bugcharge_record[8:0x10] == b"\x4D\x43\x8A\x15\x1A\x01\x04\x00", f"{label} BugCharge MB/behavior")
+    verify(bugcharge_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\xB2\x00\x00", f"{label} BugCharge parameters")
+    verify(u16(bugcharge_record, 0x18) == 0x002E, f"{label} BugCharge alphabetical sort")
+    verify(u16(bugcharge_record, 0x1A) == 80, f"{label} BugCharge per-shot power")
+    verify(u16(bugcharge_record, 0x1C) == 0x00B2, f"{label} BugCharge Standard library position")
+    verify(bugcharge_record[0x1E:0x20] == b"\x01\xFF", f"{label} BugCharge gate/dark ID")
+    for field, target in ((0x20, "BugChargeIcon"), (0x24, "BugChargeImage"), (0x28, "BugChargePalette")):
+        verify(u32(bugcharge_record, field) == symbol(target), f"{label} {target} record pointer")
 
     verify(output[BASS_RECORD:BASS_RECORD + 0x2C] == original[BASS_RECORD:BASS_RECORD + 0x2C], f"{label} Bass record")
     verify(output[0x2CDC4:0x2CDC8] == original[0x2CDC4:0x2CDC8], f"{label} Bass dispatch")
@@ -551,6 +585,11 @@ def verify_version(
         == struct.pack("<IHH", symbol("BugChainSoundSong"), 0x001C, 0x001C),
         f"{label} BugChain sound song-table entry",
     )
+    verify(
+        output[signalred_song_entry + 48:signalred_song_entry + 56]
+        == struct.pack("<IHH", symbol("BugChargeFireSong"), 0x0008, 0x0008),
+        f"{label} BugCharge fire song-table entry",
+    )
     spawn_song = rom_offset(symbol("SignalRedSpawnSong"))
     spawn_voice = rom_offset(symbol("SignalRedSpawnVoicegroup"))
     spawn_track = rom_offset(symbol("SignalRedSpawnTrack"))
@@ -636,6 +675,19 @@ def verify_version(
     )
     verify(output[bugchain_sample:bugchain_sample + 0x4B1] == bn4[0x1970A0:0x197551], f"{label} BugChain sound PCM")
 
+    bugcharge_song = rom_offset(symbol("BugChargeFireSong"))
+    bugcharge_voice = rom_offset(symbol("BugChargeFireVoicegroup"))
+    bugcharge_track = rom_offset(symbol("BugChargeFireTrack"))
+    verify(output[bugcharge_song:bugcharge_song + 4] == b"\x01\x00\x40\x00", f"{label} BugCharge fire song header")
+    verify(u32(output, bugcharge_song + 4) == symbol("BugChargeFireVoicegroup"), f"{label} BugCharge fire voice pointer")
+    verify(u32(output, bugcharge_song + 8) == symbol("BugChargeFireTrack"), f"{label} BugCharge fire track pointer")
+    verify(output[bugcharge_voice:bugcharge_voice + 12] == bn4[0x154CC0:0x154CCC], f"{label} BugCharge PSG voice")
+    verify(
+        output[bugcharge_track:bugcharge_track + 15]
+        == bn4[0x15F038:0x15F047],
+        f"{label} BugCharge fire track",
+    )
+
     death_record = output[DEATHPHOENIX_RECORD:DEATHPHOENIX_RECORD + 0x2C]
     verify(death_record[:4] == b"\x03\xFF\xFF\xFF", f"{label} DeathPhoenix code")
     verify(death_record[4:8] == b"\x00\x04\x0A\x02", f"{label} DeathPhoenix null element/class")
@@ -670,6 +722,7 @@ def verify_version(
     chaos_code = output[rom_offset(symbol("ChaosCodeStart")):rom_offset(symbol("ChaosCodeEnd"))]
     jealousy_code = output[rom_offset(symbol("JealousyCodeStart")):rom_offset(symbol("JealousyCodeEnd"))]
     bugchain_code = output[rom_offset(symbol("BugChainCodeStart")):rom_offset(symbol("BugChainCodeEnd"))]
+    bugcharge_code = output[rom_offset(symbol("BugChargeCodeStart")):rom_offset(symbol("BugChargeCodeEnd"))]
     signalred_code = output[rom_offset(symbol("SignalRedCodeStart")):rom_offset(symbol("SignalRedCodeEnd"))]
     folderback_code = output[rom_offset(symbol("FolderBackCodeStart")):rom_offset(symbol("FolderBackCodeEnd"))]
     verify(search_code and any(byte != 0xFF for byte in search_code), f"{label} SearchMan code")
@@ -688,6 +741,15 @@ def verify_version(
     verify(b"\x08\x21\x08\x42" in bugchain_code, f"{label} BugChain link-battle flag test")
     verify(struct.pack("<I", 0x0800A8F9) not in bugchain_code, f"{label} BugChain has no secondary battle helper gate")
     verify(b"\xE0\x20\xFF\x30" in bugchain_code, f"{label} BugChain imported SFX 0x1DF")
+    verify(bugcharge_code and any(byte != 0xFF for byte in bugcharge_code), f"{label} BugCharge code")
+    for target in (
+        0x02034887, 0x080005CD, 0x080026A5, 0x080026E5, 0x08002DA5,
+        0x080033AD, 0x08003459, 0x0800CC73, 0x0800E277, 0x0800E2AD,
+        0x08019893, 0x080198CF, 0x08019FB5, 0x0801A00F, 0x0801A019,
+        0x0801A04D, 0x0801A075, 0x0801A0D5, 0x0801A141, 0x0801BBF5,
+    ):
+        verify(struct.pack("<I", target) in bugcharge_code, f"{label} BugCharge runtime target 0x{target:08X}")
+    verify(b"\xE1\x20\xFF\x30" in bugcharge_code, f"{label} BugCharge imported SFX 0x1E0")
     verify(signalred_code and any(byte != 0xFF for byte in signalred_code), f"{label} SignalRed code")
     verify(folderback_code and any(byte != 0xFF for byte in folderback_code), f"{label} FolderBack code")
     for target in (
@@ -843,6 +905,7 @@ def verify_version(
         ("ChaosCodeStart", "ChaosCodeEnd"),
         ("JealousyCodeStart", "JealousyCodeEnd"),
         ("BugChainCodeStart", "BugChainCodeEnd"),
+        ("BugChargeCodeStart", "BugChargeCodeEnd"),
         ("SignalRedCodeStart", "SignalRedCodeEnd"),
         ("FolderBackCodeStart", "FolderBackCodeEnd"),
         ("SignalRedSpawnAudioStart", "SignalRedSpawnAudioEnd"),
@@ -850,6 +913,7 @@ def verify_version(
         ("LaserManFireAudioStart", "LaserManFireAudioEnd"),
         ("FolderBackRumbleAudioStart", "FolderBackRumbleAudioEnd"),
         ("BugChainSoundAudioStart", "BugChainSoundAudioEnd"),
+        ("BugChargeAudioStart", "BugChargeAudioEnd"),
         ("RelocatedSongTable", "RelocatedSongTableEnd"),
     ):
         allocated.append((symbol(start_name), symbol(end_name), start_name))
@@ -859,6 +923,8 @@ def verify_version(
     for target, _, length, _ in roll_assets:
         allocated.append((symbol(target), symbol(target) + length, target))
     for target, _, length, _ in bugchain_assets:
+        allocated.append((symbol(target), symbol(target) + length, target))
+    for target, _, length, _ in bugcharge_assets:
         allocated.append((symbol(target), symbol(target) + length, target))
     allocated.append(
         (symbol("BugChainGroup10Table"), symbol("BugChainGroup10TableEnd"), "BugChainGroup10Table")
@@ -908,6 +974,7 @@ def verify_version(
         interval(CHAOSLORD_RECORD, 0x2C),
         interval(0x2CCD0, 4), interval(0x4438, 4), interval(JEALOUSY_RECORD, 0x2C),
         interval(0x2CD3C, 4), interval(0x31CD4, 4), interval(BUGCHAIN_RECORD, 0x2C),
+        interval(0x2CD1C, 4), interval(0x43B4, 4), interval(0x31E80, 4), interval(BUGCHARGE_RECORD, 0x2C),
         interval(0x2CD4C, 4), interval(0x44D8, 4), interval(0x3201C, 4),
         interval(SIGNALRED_RECORD, 0x2C),
         interval(0x2CD40, 4), interval(0x3224, 4), interval(FOLDERBACK_RECORD, 0x2C),
