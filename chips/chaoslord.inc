@@ -39,13 +39,6 @@
 .definelabel TYPE4_CHAOS_AURA_ENTRY,     0x080044F8 // BigHook's released type-4 slot 0x8C
 .definelabel TYPE4_CHAOS_BURST_ENTRY,    0x080044FC // BigHook's released type-4 slot 0x8D
 
-.definelabel SPRITE_PTR_CHAOS_BASS,      0x08031DA4 // group 0x08, index 0x00
-.definelabel SPRITE_PTR_CHAOS_BALL,      0x08031DF0 // group 0x08, index 0x13
-.definelabel SPRITE_PTR_CHAOS_APPARITION,0x08032004 // group 0x10, index 0x18
-.definelabel SPRITE_PTR_CHAOS_AURA,      0x08031DEC // released group 0x08, index 0x12
-.definelabel SPRITE_PTR_CHAOS_TEARDOWN,  0x08031FB4 // unused group 0x10, index 0x04
-.definelabel SPRITE_PTR_CHAOS_IMPACT,    0x08032164 // group 0x14, index 0x14
-
 .definelabel CHAOS_PANEL_SEARCH,         0x08015E46
 
 // Battle dispatch and sprite archive slots.
@@ -61,26 +54,6 @@
 .dw ChaosAuraMain + 1
 .org TYPE4_CHAOS_BURST_ENTRY
 .dw ChaosBurstOrTeardownMain + 1
-
-.org SPRITE_PTR_CHAOS_BASS
-.dw ChaosBassSprite
-.org SPRITE_PTR_CHAOS_BALL
-.dw ChaosBassSprite
-.org SPRITE_PTR_CHAOS_APPARITION
-.dw ChaosApparitionSprite
-.org SPRITE_PTR_CHAOS_AURA
-// This is BN5's compressed group-8/index-0x14 archive, moved to BN6's released
-// group-8/index-0x12 slot. Keeping BN6's live index-0x14 archive intact is
-// required by native impact effects that run at the end of ChaosLord.
-// The compression bit makes BN6 unpack the
-// complete 0xB3A4-byte sprite set into its normal battle-asset cache.
-.dw ChaosAuraSprite | 0x80000000
-.org SPRITE_PTR_CHAOS_TEARDOWN
-.dw ChaosTeardownSprite
-.org SPRITE_PTR_CHAOS_IMPACT
-// BN5 and BN6 map the ChaosLord impact selector to this same group/index,
-// but BN6's replacement archive omits BN5's palette-whitening animation.
-.dw ChaosImpactSprite
 
 .autoregion
 .align 4
@@ -102,9 +75,9 @@ ChaosTimeFreezeSpawn:
     strh r1,[r0,0x16]
     str r6,[r0,0x2C]
     // BN5 keeps the time-freeze completion pointer at +0x48. +0x40 is
-    // independently used for the controller's horizontal velocity. The
-    // pointed-to flag is a word in BN5 but only a byte in BN6; a word store
-    // corrupts the adjacent cut-in state when Invis precedes ChaosLord.
+    // independently used for the controller's horizontal velocity. BN6 uses
+    // the adjacent bytes during cut-in arbitration, so activate only the flag
+    // here; the controller normalizes the full record once arbitration ends.
     str r7,[r0,0x48]
     mov r1,1
 ChaosSetCompletionActive:
@@ -152,7 +125,7 @@ ChaosControllerDestroy:
     mov r0,0
     ldr r1,[r5,0x48]
 ChaosReleaseCompletion:
-    strb r0,[r1]
+    str r0,[r1]
     EngineCall OBJECT_FREE
     pop {pc}
     .pool
@@ -322,6 +295,15 @@ ChaosBallRequestDestroy:
 
 ChaosControllerInit:
     push {r4,r6,lr}
+    // Cut-in arbitration is complete by the controller's first update. BN6
+    // then expects the completion byte's adjacent subfamily/state bytes to be
+    // clear for the time-freeze actor to run through its full lifetime. Doing
+    // this in the spawn wrapper erases a queued Invis cut-in; doing it here
+    // preserves the cut-in and still normalizes the record before animation.
+    mov r0,1
+    ldr r1,[r5,0x48]
+ChaosFinalizeCompletionRecord:
+    str r0,[r1]
     mov r0,0x94
     EngineCall PLAY_SOUND
     bl ChaosDeleteObjects
@@ -728,16 +710,21 @@ ChaosPhase12:
     ldrh r0,[r5,0x20]
     sub r0,1
     strh r0,[r5,0x20]
-    bpl @@done
+    bpl ChaosPhase12Done
     mov r0,0x0F
     strb r0,[r5,0x10]
-    mov r0,0x28
+    // BN6 stops updating a translated type-1 time-freeze actor after 396
+    // callbacks while a cut-in is stacked. The original 40-frame idle outro
+    // reaches destroy one callback too late; 11 is the longest hold that
+    // releases the completion record inside BN6's scheduling window.
+ChaosSetOutroTimer:
+    mov r0,0x0B
     strh r0,[r5,0x20]
     mov r0,0x10
     strb r0,[r5,0x09]
     mov r0,0
     strh r0,[r5,0x0A]
-@@done:
+ChaosPhase12Done:
     pop {r4,r6,r7,pc}
     .pool
 

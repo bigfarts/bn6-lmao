@@ -98,11 +98,12 @@ only one leaves either the field or the actors colored. The translated state
 writes and restores both slots together, producing four full-screen white
 frames and returning every palette before the teardown continues.
 
-BN6 sprite pointers are repointed as follows:
+The unified sprite-table installer in `sprites.inc` applies these SearchMan
+mappings when it rebuilds the complete affected group tables:
 
-- group `0x08`, index `0x11`, table offset `0x031DE8` -> actor archive
-- group `0x10`, index `0x14`, table offset `0x031FF4` -> alternate reticle
-- group `0x10`, index `0x15`, table offset `0x031FF8` -> normal reticle
+- group `0x08`, index `0x11` -> actor archive
+- group `0x10`, index `0x14` -> alternate reticle
+- group `0x10`, index `0x15` -> normal reticle
 
 BN5 has base and SP library-art palettes, not an EX palette. The patch keeps
 the base foreground and uses yellow BGR555 values `0x03FF`, `0x0299`, and
@@ -188,10 +189,13 @@ plays the cue at timer 42, matching `0x080E67A4`.
 The exact Blue Moon menu assets are relocated from icon `0x74626C` (`0x80`
 bytes), image `0x7315EC` (`0x540` bytes), and palette `0x73F1AC` (`0x20`
 bytes). The aura archive is `0x380CA4`-`0x381C30` (`0xF8C` bytes). Because
-BN6 has no free sprite pointer, its complete 92-entry group-`0x10` table is
-relocated and the aura is appended at index `0x5C`. The relocated copy also
-reapplies the imported ChaosLrd, SearchMan-reticle, and SignalRed pointers;
-otherwise moving the table root would bypass their patches in the old table.
+BN6 has no free sprite pointer, the unified installer relocates the complete
+group-`0x08`, `0x0C`, `0x10`, and `0x14` tables after every imported archive
+is defined. It appends the aura to group `0x10` at index `0x5C` and applies
+all ChaosLrd, SearchMan, LaserMan, RollArrow, BugCharge, SignalRed, and
+DeathPhoenix replacements in those same final table images. The original
+tables remain untouched, so no later copy can discard or trample an earlier
+slot patch.
 
 ## SignalRed port
 
@@ -220,7 +224,10 @@ family route and installs the translated controllers at these hooks:
 | --- | ---: | ---: |
 | family `0x15`, subfamily `0x26` | `0x02CD4C` | `SignalRedTimeFreezeSpawn` |
 | released type-4 slot `0x84` | `0x0044D8` | `SignalRedTimeFreezeMain` |
-| unused sprite group `0x10`, index `0x1E` | `0x03201C` | `SignalRedBattleSprite` |
+
+The unified sprite installer assigns `SignalRedBattleSprite` to group `0x10`,
+index `0x1E` in the relocated table rather than modifying the old table at
+`0x03201C`.
 
 BN6 has only two genuinely free type-3 slots, already used by SearchMan and
 ChaosLrd. SignalRed therefore shares ChaosLrd's slot `0x2D`: its spawner tags
@@ -361,7 +368,7 @@ Roll and the straight-moving arrow. The arrow uses BN6's native collision
 lifecycle with BN4's `8/5/3` setup and hit-effect `9`, so it travels at seven
 pixels per frame, stops on the first real contact, and invokes BN6's built-in
 loaded-chip deletion response rather than manufacturing a damage hit on every
-panel. Released group `0x0C` sprite slots `0x5A` and `0x5B` point at the
+panel. Relocated group `0x0C` sprite slots `0x5A` and `0x5B` point at the
 runtime-confirmed Blue Moon Roll and heart-arrow archives. The record codes,
 MB values, power, icons, image, and palettes are copied from Blue Moon.
 
@@ -425,8 +432,8 @@ collision effects. Thus no direction has no extra effect, while a held
 direction applies only its documented stat or Custom Window change. BN6's
 collision presenter also consumes the region in
 `r1`, so the hit reloads 25 after decoding `FD`/command effects rather than
-accidentally presenting the event word as the collision region. Released sprite slot
-group `0x0C`/index `0x56` points at the imported compressed shared archive.
+accidentally presenting the event word as the collision region. Relocated
+sprite group `0x0C`/index `0x56` points at the imported compressed shared archive.
 BN6's compressed-sprite preloader takes separate group/index arguments instead
 of BN4's packed selector, and its reused object tails require the beam Z word
 to be cleared explicitly. Translating both details is required for the native

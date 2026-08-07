@@ -58,7 +58,7 @@ CHIP_NAMES = {
     0x019: encode_name("RollAro2"),
     0x01A: encode_name("RollAro3"),
     0x0BE: encode_name("BugChain"),
-    # Verbatim BN4 English name. The source game and BN6 both allow eight
+    # Verbatim BN5 English name. The source game and BN6 both allow eight
     # visible characters, so the final "e" is intentionally absent.
     0x0B0: encode_name("BugCharg"),
     0x0BF: encode_name("Jealousy"),
@@ -80,8 +80,8 @@ CHIP_DESCRIPTIONS = {
     0x01A: encode_description("RollArrow", "destroys", "chips"),
     # Verbatim Blue Moon BugChain description (chip ID 0x0D3).
     0x0BE: encode_description("Fires", "bugs into", "enmy area"),
-    # Verbatim BN4 BugCharge description (chip ID 0x136).
-    0x0B0: encode_description("EvilChip!", "Gets powr", "with turn"),
+    # Verbatim BN5 BugCharge description (chip ID 0x136).
+    0x0B0: encode_description("All your", "bugs will", "attack!"),
     0x0BF: encode_description("More dmg", "if enemy", "has chip"),
     0x0E3: encode_description("A laser", "pierces", "1 thru"),
     0x0E4: encode_description("A laser", "pierces", "1 thru"),

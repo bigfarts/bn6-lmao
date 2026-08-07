@@ -47,16 +47,11 @@
 
 .definelabel TIMEFREEZE_DISPATCH_HEATMAN,    0x0802CD64
 .definelabel TYPE1_LASERMAN_ENTRY,           0x08003D5C // released type-1 slot 0x30
-.definelabel SPRITE_PTR_LASERMAN,            0x08031F58 // group 0x0C/index 0x56
 
 .org TIMEFREEZE_DISPATCH_HEATMAN
 .dw LaserManTimeFreezeSpawn + 1
 .org TYPE1_LASERMAN_ENTRY
 .dw LaserManSlotMain + 1
-.org SPRITE_PTR_LASERMAN
-// Blue Moon group 0x08/index 0x16 is LZ77-compressed. Keep the compression
-// flag so BN6 decompresses the imported archive before parsing it.
-.dw LaserManBattleSprite | 0x80000000
 
 .autoregion
 .align 4

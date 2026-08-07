@@ -43,10 +43,6 @@
 .definelabel TYPE3_SEARCH_HIT_ENTRY, 0x08003F74 // free type-3 slot 0x2c
 .definelabel TYPE4_RETICLE_ENTRY,    0x08004324 // free type-4 slot 0x17
 
-.definelabel SPRITE_PTR_SEARCHMAN,   0x08031DE8 // navi group 0x08, index 0x11
-.definelabel SPRITE_PTR_RETICLE_ALT, 0x08031FF4 // group 0x10, index 0x14
-.definelabel SPRITE_PTR_RETICLE,     0x08031FF8 // group 0x10, index 0x15
-
 // ---------------------------------------------------------------------------
 // Hook the three cooperating native object classes.
 
@@ -61,13 +57,6 @@
 
 .org TYPE4_RETICLE_ENTRY
 .dw SearchManReticleMain + 1
-
-.org SPRITE_PTR_SEARCHMAN
-.dw SearchManBattleSprite
-
-.org SPRITE_PTR_RETICLE_ALT
-.dw SearchManReticleAltSprite
-.dw SearchManReticleSprite
 
 // ---------------------------------------------------------------------------
 // Runtime code. This is a direct state-for-state port of BN5's type-1 0x31
@@ -815,8 +804,14 @@ SearchManHitMain:
     ldr r0,[r5,0x78]
     ldr r1,=ROLLARROW_PROJECTILE_TAG
     cmp r0,r1
-    bne @@laser
+    bne @@bugcharge
     ldr r0,=RollArrowProjectileMain + 1
+    bx r0
+@@bugcharge:
+    ldr r1,=BUGCHARGE_PROJECTILE_TAG
+    cmp r0,r1
+    bne @@laser
+    ldr r0,=BugChargeProjectileMain + 1
     bx r0
 @@laser:
     ldr r1,=0x4C484954                  // LaserMan's tagged type-3 row hit

@@ -62,7 +62,7 @@ BugChain's Blue Moon icon, library art, palette, battle aura, and sound effect.
 Replaces BugRSword with Blue Moon SignalRed. The 100-HP traffic light spawns
 in front of the user, blocks the opponent's BattleChips for 420 red frames,
 then permits them during a 50-frame green window. It repeats this cycle until
-destroyed. SignalRed is a 61 MB Cursor-element GigaChip in code S. Both
+destroyed. SignalRed is a 61 MB Obstacle-element GigaChip in code S. Both
 versions use its Blue Moon battle sprite; only Gregar receives SignalRed chip
 art, while Falzar retains the original BugRSword chip art.
 

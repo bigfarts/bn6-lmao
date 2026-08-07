@@ -93,6 +93,11 @@
 .definelabel TYPE4_TIMESTOP_OUTRO,      0x0800BC88
 .definelabel TYPE4_TIMESTOP_FREE,       0x0800BD34
 
+// SearchMan's free type-3 hit slot is shared by tagged imported projectiles.
+// Keep this tag global because SearchMan's dispatcher is assembled before the
+// BugCharge implementation that owns the object.
+.definelabel BUGCHARGE_PROJECTILE_TAG,   0x50434742 // "BGCP"
+
 // Battle-effect helpers used by BN5's dormant ChaosLord Ball Bass object.
 // These are the matching BN6 implementations, identified by their complete
 // state setup and object-layout behavior rather than by address deltas.

@@ -6,8 +6,8 @@ BUILD_DIR="$PATCH_DIR/build"
 DIST_DIR="$PATCH_DIR/dist"
 TANGOPATCH_SRC="$PATCH_DIR/tangopatch"
 
-if [ "$#" -ne 5 ]; then
-    echo "usage: $0 BN5_ROM BN6_GREGAR_ROM BN6_FALZAR_ROM BN4_BLUE_MOON_ROM BN3_BLUE_ROM" >&2
+if [ "$#" -ne 5 ] && [ "$#" -ne 6 ]; then
+    echo "usage: $0 BN5_PROTOMAN_ROM BN6_GREGAR_ROM BN6_FALZAR_ROM BN4_BLUE_MOON_ROM BN3_BLUE_ROM [BN5_COLONEL_ROM]" >&2
     exit 2
 fi
 
@@ -16,6 +16,11 @@ BN6_GREGAR_ROM=$2
 BN6_FALZAR_ROM=$3
 BN4_BLUE_MOON_ROM=$4
 BN3_BLUE_ROM=$5
+if [ "$#" -eq 6 ]; then
+    BN5_COLONEL_ROM=$6
+else
+    BN5_COLONEL_ROM=$(dirname -- "$BN5_ROM")/exe5k_rom_k_e.srl
+fi
 
 ARMIPS_BIN=${ARMIPS:-$(command -v armips || true)}
 FLIPS_BIN=${FLIPS:-$(command -v flips || true)}
@@ -39,6 +44,7 @@ check_sha256() {
 }
 
 check_sha256 "$BN5_ROM" b35f5890f54784c9d90a896dc5ac4831d43acc9f94e8c42816742fcfa6b41a7b
+check_sha256 "$BN5_COLONEL_ROM" d4b7aefc3918c9f801c84cfd1322c2cdbb9d13c2e3271b3c3f8f9927480f2633
 check_sha256 "$BN6_GREGAR_ROM" 572e113eeb53bb29cd9ff8acb9db265cfd48c5e509c8d0e6420b58e71e442cf2
 check_sha256 "$BN6_FALZAR_ROM" a37c1028adb72082b51e142321fa437967bc54b6f46730a53f6581ad455ad670
 check_sha256 "$BN4_BLUE_MOON_ROM" 63ea187c792f4bfcd077f92c3a509fa09ed422993aee9480c39dfdf6a561c5c1
@@ -116,17 +122,29 @@ dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-palette.bin" bs=1 skip=$((0x7
 dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-battle-sprite.bin" bs=1 skip=$((0x380CA4)) count=$((0xF8C)) 2>/dev/null
 # Blue Moon SFX 0x015D's sample header plus its complete 0x4A1-byte PCM body.
 dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-sound-sample.bin" bs=1 skip=$((0x1970A0)) count=$((0x4B1)) 2>/dev/null
-# BN6 group 0x10 contains 92 live pointers in both versions. Preserve the
-# appropriate complete table before appending BugChain's new index 0x5C.
-dd if="$BN6_GREGAR_ROM" of="$BUILD_DIR/bugchain-group10-table-gregar.bin" bs=1 skip=$((0x31FA4)) count=$((0x170)) 2>/dev/null
-dd if="$BN6_FALZAR_ROM" of="$BUILD_DIR/bugchain-group10-table-falzar.bin" bs=1 skip=$((0x31FA4)) count=$((0x170)) 2>/dev/null
+# Preserve every native sprite table that receives imported archives. They are
+# rebuilt together after all chip includes so no later table copy can discard
+# an earlier per-slot patch.
+for version in gregar falzar; do
+    if [ "$version" = gregar ]; then
+        sprite_rom=$BN6_GREGAR_ROM
+    else
+        sprite_rom=$BN6_FALZAR_ROM
+    fi
+    dd if="$sprite_rom" of="$BUILD_DIR/sprite-group08-table-$version.bin" bs=1 skip=$((0x31DA4)) count=$((0x5C)) 2>/dev/null
+    dd if="$sprite_rom" of="$BUILD_DIR/sprite-group0C-table-$version.bin" bs=1 skip=$((0x31E00)) count=$((0x1A4)) 2>/dev/null
+    dd if="$sprite_rom" of="$BUILD_DIR/sprite-group10-table-$version.bin" bs=1 skip=$((0x31FA4)) count=$((0x170)) 2>/dev/null
+    dd if="$sprite_rom" of="$BUILD_DIR/sprite-group14-table-$version.bin" bs=1 skip=$((0x32114)) count=$((0x80)) 2>/dev/null
+done
 
 # BugCharge replaces BugFix while retaining its StandardChip class and library
-# slot. Import the exact BN4 menu art and group-0x0C/index-0x09 Gospel shot.
-dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugcharge-icon.bin" bs=1 skip=$((0x74716C)) count=$((0x80)) 2>/dev/null
-dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugcharge-image.bin" bs=1 skip=$((0x73BDEC)) count=$((0x540)) 2>/dev/null
-dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugcharge-palette.bin" bs=1 skip=$((0x73FB8C)) count=$((0x20)) 2>/dev/null
-dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugcharge-projectile-sprite.bin" bs=1 skip=$((0x35683C)) count=$((0xCEC)) 2>/dev/null
+# slot. BugCharge is Colonel-exclusive, so source its real menu art from the
+# Team Colonel record. Group 0x0C/index 0x44 is the shared charge-orbit archive.
+dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-icon.bin" bs=1 skip=$((0x74AE3C)) count=$((0x80)) 2>/dev/null
+dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-image.bin" bs=1 skip=$((0x730664)) count=$((0x540)) 2>/dev/null
+dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-palette.bin" bs=1 skip=$((0x735D64)) count=$((0x20)) 2>/dev/null
+dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-projectile-sprite.bin" bs=1 skip=$((0x322158)) count=$((0x8EC)) 2>/dev/null
+dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-charge-sample.bin" bs=1 skip=$((0x191A80)) count=$((0x676)) 2>/dev/null
 
 # RollArrow1/2/3 replace TrainArrow1/2/3 in both versions. Runtime tracing in
 # Blue Moon identifies Roll as group 0x08/index 0x01 and the heart-arrow as
@@ -186,18 +204,24 @@ cp "$BUILD_DIR/chip-names-1-gregar.bin" "$BUILD_DIR/chip-names-1.bin"
 cp "$BUILD_DIR/chip-descriptions-0-gregar.bin" "$BUILD_DIR/chip-descriptions-0.bin"
 cp "$BUILD_DIR/chip-descriptions-1-gregar.bin" "$BUILD_DIR/chip-descriptions-1.bin"
 cp "$BUILD_DIR/song-table-gregar.bin" "$BUILD_DIR/song-table.bin"
-cp "$BUILD_DIR/bugchain-group10-table-gregar.bin" "$BUILD_DIR/bugchain-group10-table.bin"
+cp "$BUILD_DIR/sprite-group08-table-gregar.bin" "$BUILD_DIR/sprite-group08-table.bin"
+cp "$BUILD_DIR/sprite-group0C-table-gregar.bin" "$BUILD_DIR/sprite-group0C-table.bin"
+cp "$BUILD_DIR/sprite-group10-table-gregar.bin" "$BUILD_DIR/sprite-group10-table.bin"
+cp "$BUILD_DIR/sprite-group14-table-gregar.bin" "$BUILD_DIR/sprite-group14-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/gregar.sym" gregar.asm
 cp "$BUILD_DIR/chip-names-0-falzar.bin" "$BUILD_DIR/chip-names-0.bin"
 cp "$BUILD_DIR/chip-names-1-falzar.bin" "$BUILD_DIR/chip-names-1.bin"
 cp "$BUILD_DIR/chip-descriptions-0-falzar.bin" "$BUILD_DIR/chip-descriptions-0.bin"
 cp "$BUILD_DIR/chip-descriptions-1-falzar.bin" "$BUILD_DIR/chip-descriptions-1.bin"
 cp "$BUILD_DIR/song-table-falzar.bin" "$BUILD_DIR/song-table.bin"
-cp "$BUILD_DIR/bugchain-group10-table-falzar.bin" "$BUILD_DIR/bugchain-group10-table.bin"
+cp "$BUILD_DIR/sprite-group08-table-falzar.bin" "$BUILD_DIR/sprite-group08-table.bin"
+cp "$BUILD_DIR/sprite-group0C-table-falzar.bin" "$BUILD_DIR/sprite-group0C-table.bin"
+cp "$BUILD_DIR/sprite-group10-table-falzar.bin" "$BUILD_DIR/sprite-group10-table.bin"
+cp "$BUILD_DIR/sprite-group14-table-falzar.bin" "$BUILD_DIR/sprite-group14-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/falzar.sym" falzar.asm
 
 python3 "$PATCH_DIR/verify.py" \
-    "$BN5_ROM" "$BN4_BLUE_MOON_ROM" "$BN3_BLUE_ROM" \
+    "$BN5_ROM" "$BN5_COLONEL_ROM" "$BN4_BLUE_MOON_ROM" "$BN3_BLUE_ROM" \
     "$BN6_GREGAR_ROM" "$BUILD_DIR/exe6_rom_e_lmao.srl" "$BUILD_DIR/gregar.sym" \
     "$BN6_FALZAR_ROM" "$BUILD_DIR/exe6f_rom_f_e_lmao.srl" "$BUILD_DIR/falzar.sym"
 

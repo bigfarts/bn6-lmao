@@ -43,15 +43,9 @@
     .dw RollArrowIcon3,RollArrowImage,RollArrowPalette3
 
 .definelabel TYPE1_ROLL_ENTRY,              0x08003DE8 // released type-1 slot 0x53
-.definelabel SPRITE_PTR_ROLL,               0x08031F68 // released group 0x0C/index 0x5A
-.definelabel SPRITE_PTR_ROLL_ARROW,         0x08031F6C // released group 0x0C/index 0x5B
 
 .org TYPE1_ROLL_ENTRY
 .dw RollArrowActorMain + 1
-.org SPRITE_PTR_ROLL
-.dw RollArrowActorSprite
-.org SPRITE_PTR_ROLL_ARROW
-.dw RollArrowProjectileSprite
 
 .autoregion
 .align 4

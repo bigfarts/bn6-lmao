@@ -11,4 +11,5 @@
 .include "chips/folderback.inc"
 .include "audio.inc"
 .include "chips/deathphoenix.inc"
+.include "sprites.inc"
 .include "text.inc"

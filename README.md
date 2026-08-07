@@ -73,7 +73,7 @@ palette are imported from Blue Moon in both versions, along with the original
 Replaces BugRSword with the complete Blue Moon SignalRed behavior. The 100-HP
 traffic light appears on the panel in front of the user, disables the opposing
 side's BattleChip use for 420 red frames, opens a 50-frame green window, and
-repeats until destroyed. It is a 61 MB Cursor-element GigaChip in code S.
+repeats until destroyed. It is a 61 MB Obstacle-element GigaChip in code S.
 Both versions import the Blue Moon battle sprite; only Gregar replaces the
 BugRSword menu icon, library art, and palette, while Falzar keeps its original
 slot art. Its placement cue imports Blue Moon's original sample and sequence;

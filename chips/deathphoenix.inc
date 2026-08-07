@@ -30,8 +30,6 @@
 .definelabel TYPE1_DEATHPHOENIX_ENTRY,        0x08003CA0 // CrossDiv type-1 slot 1
 .definelabel TYPE4_DEATH_STRIKE_ENTRY,        0x080044CC // released type-4 slot 0x81
 .definelabel TYPE4_DEATH_FLAME_ENTRY,         0x080044D0 // released type-4 slot 0x82
-.definelabel SPRITE_PTR_DEATHPHOENIX,         0x08031F5C // group 0x0C/index 0x57
-.definelabel SPRITE_PTR_DEATH_STRIKE,         0x08032170 // released group 0x14/index 0x17
 .definelabel DEATH_SINE_TABLE,                0x080065E0
 
 .definelabel DEATH_SPRITE_SPECIAL,            0x08003006
@@ -49,10 +47,6 @@
 .dw DeathStrikeMain + 1
 .org TYPE4_DEATH_FLAME_ENTRY
 .dw DeathFlameMain + 1
-.org SPRITE_PTR_DEATHPHOENIX
-.dw DeathPhoenixBattleSprite
-.org SPRITE_PTR_DEATH_STRIKE
-.dw DeathPhoenixStrikeSprite
 
 .autoregion
 .align 4

@@ -7,11 +7,11 @@
 .definelabel SIGNALRED_ID,                  0x131
 
 // Preserve BugRSword's BN6 family route, Giga library slot, and version-only
-// availability flag while importing SignalRed's S code, Cursor element, 61 MB
+// availability flag while importing SignalRed's S code, Obstacle element, 61 MB
 // cost, and zero behavior parameters from Blue Moon.
 .org CHIP_DATA + SIGNALRED_ID * 0x2C
     .db 0x12,0xFF,0xFF,0xFF // S
-    .db 0x00,0x04,0x06,0x02
+    .db 0x00,0x04,0x07,0x02
     .db 0x3D
 .if FALZAR
     .db 0x01
@@ -32,7 +32,6 @@
 
 .definelabel SIGNALRED_TIMEFREEZE_ENTRY,    0x0802CD4C // family 0x15, subfamily 0x26
 .definelabel TYPE4_SIGNALRED_ENTRY,         0x080044D8 // BugRSword's released type-4 slot 0x84
-.definelabel SPRITE_PTR_SIGNALRED,          0x0803201C // group 0x10, unused index 0x1E
 .definelabel SIGNALRED_SFX_SPAWN,           0x01DA // relocated slot populated with Blue Moon SFX 0x00A0
 .definelabel SIGNALRED_SFX_GREEN,           0x00D1 // BN6 match for Blue Moon SFX 0x015C
 .definelabel DUST_FIRE_SPRITE_TABLE_PTR_0,  0x08012010
@@ -48,9 +47,6 @@
 
 .org TYPE4_SIGNALRED_ENTRY
 .dw SignalRedTimeFreezeMain + 1
-
-.org SPRITE_PTR_SIGNALRED
-.dw SignalRedBattleSprite
 
 // DustCross stores a four-bit obstacle kind for each sucked object. Native
 // BN6 uses kinds 0-14; reserve kind 15 for SignalRed and redirect both the
