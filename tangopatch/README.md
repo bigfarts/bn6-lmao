@@ -49,6 +49,14 @@ StandardChip in code J with 80 displayed power. It deals 80 damage for each
 chip loaded by the opponent and then deletes those loaded chips. Both versions
 use Jealousy's BN5 icon, library art, palette, and chip-delete overlay graphics.
 
+## BugChain
+
+Replaces CopyDamage with Blue Moon BugChain. The 59 MB, Null-element
+StandardChip uses codes C/* and keeps CopyDamage's library slot. In link
+battles it copies every active bug on the user to the opposing Navi without
+removing the user's bugs or weakening existing target bugs. Both versions use
+BugChain's Blue Moon icon, library art, palette, battle aura, and sound effect.
+
 ## SignalRed
 
 Replaces BugRSword with Blue Moon SignalRed. The 100-HP traffic light spawns

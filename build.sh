@@ -108,6 +108,19 @@ dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/signalred-battle-sprite.bin" bs=1 skip
 # Blue Moon SFX 0x00A0's sample header plus its complete 0x881-byte PCM body.
 dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/signalred-spawn-sample.bin" bs=1 skip=$((0x17C834)) count=$((0x891)) 2>/dev/null
 
+# BugChain replaces CopyDamage. Import its menu art and the group-0x0C/index
+# 0x32 aura archive which Blue Moon attaches to both Navis during time freeze.
+dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-icon.bin" bs=1 skip=$((0x74626C)) count=$((0x80)) 2>/dev/null
+dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-image.bin" bs=1 skip=$((0x7315EC)) count=$((0x540)) 2>/dev/null
+dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-palette.bin" bs=1 skip=$((0x73F1AC)) count=$((0x20)) 2>/dev/null
+dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-battle-sprite.bin" bs=1 skip=$((0x380CA4)) count=$((0xF8C)) 2>/dev/null
+# Blue Moon SFX 0x015D's sample header plus its complete 0x4A1-byte PCM body.
+dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-sound-sample.bin" bs=1 skip=$((0x1970A0)) count=$((0x4B1)) 2>/dev/null
+# BN6 group 0x10 contains 92 live pointers in both versions. Preserve the
+# appropriate complete table before appending BugChain's new index 0x5C.
+dd if="$BN6_GREGAR_ROM" of="$BUILD_DIR/bugchain-group10-table-gregar.bin" bs=1 skip=$((0x31FA4)) count=$((0x170)) 2>/dev/null
+dd if="$BN6_FALZAR_ROM" of="$BUILD_DIR/bugchain-group10-table-falzar.bin" bs=1 skip=$((0x31FA4)) count=$((0x170)) 2>/dev/null
+
 # RollArrow1/2/3 replace TrainArrow1/2/3 in both versions. Runtime tracing in
 # Blue Moon identifies Roll as group 0x08/index 0x01 and the heart-arrow as
 # group 0x0C/index 0x10. Both archives are stored uncompressed in the ROM.
@@ -166,12 +179,14 @@ cp "$BUILD_DIR/chip-names-1-gregar.bin" "$BUILD_DIR/chip-names-1.bin"
 cp "$BUILD_DIR/chip-descriptions-0-gregar.bin" "$BUILD_DIR/chip-descriptions-0.bin"
 cp "$BUILD_DIR/chip-descriptions-1-gregar.bin" "$BUILD_DIR/chip-descriptions-1.bin"
 cp "$BUILD_DIR/song-table-gregar.bin" "$BUILD_DIR/song-table.bin"
+cp "$BUILD_DIR/bugchain-group10-table-gregar.bin" "$BUILD_DIR/bugchain-group10-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/gregar.sym" gregar.asm
 cp "$BUILD_DIR/chip-names-0-falzar.bin" "$BUILD_DIR/chip-names-0.bin"
 cp "$BUILD_DIR/chip-names-1-falzar.bin" "$BUILD_DIR/chip-names-1.bin"
 cp "$BUILD_DIR/chip-descriptions-0-falzar.bin" "$BUILD_DIR/chip-descriptions-0.bin"
 cp "$BUILD_DIR/chip-descriptions-1-falzar.bin" "$BUILD_DIR/chip-descriptions-1.bin"
 cp "$BUILD_DIR/song-table-falzar.bin" "$BUILD_DIR/song-table.bin"
+cp "$BUILD_DIR/bugchain-group10-table-falzar.bin" "$BUILD_DIR/bugchain-group10-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/falzar.sym" falzar.asm
 
 python3 "$PATCH_DIR/verify.py" \

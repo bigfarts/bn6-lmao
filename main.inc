@@ -5,6 +5,7 @@
 .include "chips/searchman.inc"
 .include "chips/laserman.inc"
 .include "chips/jealousy.inc"
+.include "chips/bugchain.inc"
 .include "chips/signalred.inc"
 .include "chips/folderback.inc"
 .include "audio.inc"

@@ -56,6 +56,7 @@ CHIP_NAMES = {
     0x018: encode_name("RollAro1"),
     0x019: encode_name("RollAro2"),
     0x01A: encode_name("RollAro3"),
+    0x0BE: encode_name("BugChain"),
     0x0BF: encode_name("Jealousy"),
     0x0E3: encode_name("LaserMan"),
     0x0E4: encode_name("LaserMn[EX]"),
@@ -73,6 +74,8 @@ CHIP_DESCRIPTIONS = {
     0x018: encode_description("RollArrow", "destroys", "chips"),
     0x019: encode_description("RollArrow", "destroys", "chips"),
     0x01A: encode_description("RollArrow", "destroys", "chips"),
+    # Verbatim Blue Moon BugChain description (chip ID 0x0D3).
+    0x0BE: encode_description("Fires", "bugs into", "enmy area"),
     0x0BF: encode_description("More dmg", "if enemy", "has chip"),
     0x0E3: encode_description("A laser", "pierces", "1 thru"),
     0x0E4: encode_description("A laser", "pierces", "1 thru"),

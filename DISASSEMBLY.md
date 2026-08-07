@@ -153,6 +153,44 @@ unrelated BN6 IWRAM. The menu icon (`0x748F38`, `0x80` bytes), library
 art (`0x7250E8`, `0x540` bytes), and palette (`0x734188`, `0x20` bytes) are also
 relocated with `.autoregion`.
 
+## BugChain port
+
+Blue Moon BugChain is chip ID `0xD3`. Its family-`0x0C`/subfamily-`0x1F`
+wrapper at `0x080E6678` creates type-4 controller `0x3F`, whose main begins at
+`0x080E65EC`. The chip-specific state waits 60 frames and calls the transfer
+routine at `0x080E669A`; that routine duplicates active bug properties from
+the user onto the opposing Navi without clearing the source. Blue Moon gates
+the effect to link battles. It also creates type-4 object `0x40` on both Navis;
+that object's main at `0x080E6724` loads group `0x0C`/index `0x32` and follows
+its owner for 50 frames. At timer value 42, `0x080E67A4` plays SFX `0x15D`.
+
+BN6 CopyDamage is chip ID `0xBE`. The port keeps that Standard-chip library
+slot and uses the unused family-`0x15`/subfamily-`0x22` dispatch at file offset
+`0x02CD3C`. Its controller shares Jealousy's released type-4 slot `0x5C`
+through a private tail-word tag. The common BN6 time-freeze lifecycle supplies
+the intro, freeze, outro, and cleanup states. BN6 no longer keeps Blue Moon's
+battle-kind enum in the same byte: its native link-only paths instead read the
+battle configuration flags through `0x0802D246` and test bit `0x08`, which the
+port uses for the equivalent gate.
+
+BN6 expanded the battle-property block, so copying Blue Moon's seven raw byte
+offsets would move unrelated state. The translated transfer instead covers
+the nine byte fields and one halfword field cleared by BN6 BugFix at
+`0x080E5D04`: `0x31`, `0x13`, `0x14`, `0x16`, `0x24`, `0x19`, `0x18`,
+`0x1A`, `0x63`, and halfword `0x54`. A nonzero source value replaces the
+target only when it is larger, preserving a stronger bug already present.
+
+Blue Moon SFX `0x15D` has no exact BN6 match. Its one-track sequence, voice
+priority `0x1C`, sample header, and complete `0x4A1`-byte PCM body at
+`0x081970A0` are imported into relocated BN6 song-table slot `0x1DF`. Each aura
+plays the cue at timer 42, matching `0x080E67A4`.
+
+The exact Blue Moon menu assets are relocated from icon `0x74626C` (`0x80`
+bytes), image `0x7315EC` (`0x540` bytes), and palette `0x73F1AC` (`0x20`
+bytes). The aura archive is `0x380CA4`-`0x381C30` (`0xF8C` bytes). Because
+BN6 has no free sprite pointer, its complete 92-entry group-`0x10` table is
+relocated unchanged and the aura is appended at index `0x5C`.
+
 ## SignalRed port
 
 Blue Moon SignalRed is chip ID `0x131`. Its family-`0x15`/subfamily-`0x26`

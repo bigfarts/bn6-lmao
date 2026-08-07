@@ -58,6 +58,16 @@ loaded by the opponent, Jealousy produces one 80-damage full-field pulse, then
 runs BN5's chip-delete overlay and cleanup sequence. Its icon, library art, palette, and
 delete-overlay graphics are imported from BN5 in both versions.
 
+### BugChain
+
+Replaces CopyDamage with Blue Moon's BugChain. It is a 59 MB, Null-element
+StandardChip in codes C/* and keeps CopyDamage's library slot. In link battles,
+BugChain waits through Blue Moon's 60-frame time-freeze beat and copies every
+active bug on the user to the opposing Navi without removing the user's bugs
+or weakening bugs already present on the target. Its icon, library art, and
+palette are imported from Blue Moon in both versions, along with the original
+50-frame bug aura and SFX `0x15D` displayed and played by both Navis.
+
 ### SignalRed
 
 Replaces BugRSword with the complete Blue Moon SignalRed behavior. The 100-HP
@@ -93,7 +103,8 @@ center-cropped library art, palette, name, and description come from BN3 Blue.
 ## Assets and palettes
 
 The build extracts RollArrow's three menu-art variants, Roll actor and
-heart-arrow archives, summon and firing samples, LaserMan's menu art, palettes,
+heart-arrow archives, summon and firing samples, BugChain's menu art and aura,
+LaserMan's menu art and palettes,
 shared actor/beam archive, SignalRed's battle sprite, and Gregar-only SignalRed
 menu art from Blue Moon, Jealousy's menu/overlay graphics, FolderBack's BN3
 menu art and original rumble PCM, plus the full BN5
