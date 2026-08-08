@@ -230,7 +230,7 @@ BN6 BugFix remains native at chip ID `0x0B0`: neither its chip record nor its
 family-`0x15`/subfamily-`0x1A` and type-4 `0x3B` dispatch entries are patched.
 BugCharge instead occupies chip ID `0x131`, the Gregar-exclusive BugRSword
 slot previously used by this patch's SignalRed port. It keeps that physical
-library position and version flag, but uses the Standard class while importing BN5's B code,
+library position and version flag, and uses the Giga class while importing BN5's B code,
 77 MB cost, Null element, and 200 per-shot power.
 
 SignalRed moves to Navi+20's Standard-chip ID `0x0C1`, retaining Navi+20's

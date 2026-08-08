@@ -60,7 +60,7 @@ BugChain's Blue Moon icon, library art, palette, battle aura, and sound effect.
 ## BugCharg
 
 Replaces the former SignalRed/BugRSword slot with BN5 BugCharge and restores
-BN6 BugFix. BugCharge is a 77 MB, Null-element StandardChip in code B. It fires one
+BN6 BugFix. BugCharge is a 77 MB, Null-element GigaChip in code B. It fires one
 200-damage Gospel shot plus one shot per active battle-bug type it clears,
 including BN6's Custom-screen bug and its latched runtime state.
 The stationary Gospel remains for the complete firing sequence.

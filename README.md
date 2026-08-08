@@ -71,7 +71,7 @@ palette are imported from Blue Moon in both versions, along with the original
 ### BugCharg
 
 Replaces the former SignalRed/BugRSword slot with BN5 Colonel's BugCharge and
-restores BN6 BugFix. BugCharge is a StandardChip: the 77 MB,
+restores BN6 BugFix. BugCharge is a GigaChip: the 77 MB,
 Null-element chip uses code B and fires one 200-damage Gospel shot plus one
 additional shot for every active battle-bug type it clears. It consumes the
 complete BN6 BugFix property set, including the Custom-screen bug, and resets

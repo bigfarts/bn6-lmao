@@ -588,7 +588,7 @@ def verify_version(
 
     bugcharge_record = output[BUGCHARGE_RECORD:BUGCHARGE_RECORD + 0x2C]
     verify(bugcharge_record[:4] == b"\x01\xFF\xFF\xFF", f"{label} BN5 BugCharge B code")
-    verify(bugcharge_record[4:8] == b"\x00\x04\x0A\x00", f"{label} BugCharge rarity/element/Standard class")
+    verify(bugcharge_record[4:8] == b"\x00\x04\x0A\x02", f"{label} BugCharge rarity/element/Giga class")
     verify(
         bugcharge_record[8:0x10]
         == bytes((0x4D, 0x41 if replace_bugcharge_art else 0x01, 0x8A, 0x15, 0x26, 0x01, 0x04, 0x00)),

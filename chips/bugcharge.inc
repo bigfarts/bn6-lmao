@@ -9,14 +9,14 @@
 .definelabel BUGCHARGE_CONTROLLER_TAG,        0x43434742 // "BGCC"
 .definelabel BUGCHARGE_CHARGE_HEAD_TAG,       0x4F434742 // "BGCO"
 
-// B code, BN5 rarity/MB cost, Null element, Standard class, and 200 power.
+// B code, BN5 rarity/MB cost, Null element, Giga class, and 200 power.
 // Preserve BugRSword's physical library position, version-only availability
 // flag, and gate byte; the final ROM pass replaces its sort key. BugCharge and SignalRed
 // share the former BugRSword family route; record byte 0x0A distinguishes
 // their launchers.
 .org CHIP_DATA + BUGCHARGE_ID * 0x2C
     .db 0x01,0xFF,0xFF,0xFF             // B
-    .db 0x00,0x04,0x0A,0x00             // rarity 4, Null, Standard
+    .db 0x00,0x04,0x0A,0x02             // rarity 4, Null, Giga
     .db 0x4D
 .if FALZAR
     .db 0x01
