@@ -58,6 +58,8 @@ adaptations are:
 - The miss visual's type-4 spawner replaces `r5` with the spawned effect. The
   port preserves the original shot-object `r5` across that call so cleanup
   always frees the shot rather than the effect.
+- The family wrapper's Cursor element in `r3` is copied into every spawned hit
+  object's `+0x0E` element byte, preserving SearchMan's trap-erasure behavior.
 - Base, EX, and SP all select actor palette `0`, giving every summoned
   SearchMan the same in-battle colors while leaving menu-art palettes distinct.
 
@@ -123,6 +125,13 @@ bytes are the sprite group and index read by `ChaosBallInit`. The packed word
 is therefore assembled as `0x10010008 | (CHAOS_BASS_BALL_SPRITE_INDEX << 8)`.
 Changing only the visible `r2` value leaves the old index in the object and
 loads BN6's native white-dot placeholder instead of the Ball Bass composite.
+
+The controller also preserves BN5's `0x8E` opening timer so Nebula Gray's
+fade is not shortened. Bass's final animation `0x0F` has two five-frame
+frames and marks its looping boundary with the animation-end flag. Phase 16
+retires the controller at that boundary, while retaining BN5's `0x28` timer
+as a fallback. This removes only the invisible post-animation wait needed to
+fit BN6's shorter time-freeze callback budget.
 
 Ball Bass does not use group `0x14`/index `0x14` for its impact. BN5 derives
 the type-4 `0x24` pattern selector as attack-object variant `1 + 5`, yielding
@@ -233,13 +242,19 @@ library position and version flag, and uses the Giga class while importing BN5's
 77 MB cost, Null element, and 200 per-shot power.
 
 SignalRed moves to Navi+20's Standard-chip ID `0x0C1`, retaining Navi+20's
-library position. Both imported chips select the former BugRSword
-family-`0x15`/subfamily-`0x26` route. The shared launcher checks record byte
-`0x0A` in packed attack word `r6`: BN5 BugCharge keeps marker `0x8A`, while
-SignalRed uses zero. Their type-4 controllers share slot `0x84`;
-BugCharge's controller and charge-head tags select `BugChargeSharedMain`, while the
-untagged path selects `SignalRedTimeFreezeMain`. FolderBack's outer tagged
-dispatcher tail-calls this shared selector for every non-FolderBack object.
+library position. Both imported chips select the family-`0x15`/subfamily-`0x26`
+route that native HubBatch also uses. The shared launcher checks record byte
+`0x0A` in packed attack word `r6`. SignalRed uses zero. BugCharge uses private
+marker `0x8B` rather than BN5's `0x8A`, because native BgDthThd already uses
+`0x8A`; HubBatch uses `0x94`. Every marker other than zero and `0x8B` is
+forwarded to the original version-specific launcher, preserving PunchArm,
+NeedlArm, PuzzlArm, BoomrArm, DarkInvs, HubBatch, and BgDthThd. The two imported
+controllers carry their private packed markers into shared type-4 slot `0x84`,
+where zero selects `SignalRedTimeFreezeMain`, `0x8B` selects
+`BugChargeSharedMain`, and every other marker remains native. BugCharge copies
+`0x8B` into its charge-head visual and uses a tail tag internally to distinguish
+that visual from its controller. FolderBack's outer tagged dispatcher
+tail-calls this shared selector for every non-FolderBack object.
 
 Runtime tracing of Colonel BugCharge identifies group `0x0C`/index `0x43` as
 both the stationary and moving Gospel archive. The stationary object is 24
@@ -275,13 +290,13 @@ Blue Moon's green cue `0x15C` corresponds to BN6 sound `0x0D1` (the same
 sequence with BN6's native volume balance), rather than the unrelated
 same-numbered sounds.
 
-The port shares BugRSword's released family route between BugCharge and
+The port shares the native HubBatch/BugRSword family route with BugCharge and
 SignalRed and installs the translated controllers at these hooks:
 
 | Hook | BN6 file offset | Patched target |
 | --- | ---: | ---: |
 | family `0x15`, subfamily `0x26` | `0x02CD4C` | `SignalRedBugChargeTimeFreezeDispatch` |
-| released type-4 slot `0x84` | `0x0044D8` | `FolderBackSharedMain` (then `SignalRedBugChargeSharedMain`) |
+| shared type-4 slot `0x84` | `0x0044D8` | `FolderBackSharedMain` (then `SignalRedBugChargeSharedMain`) |
 
 The unified sprite installer appends `SignalRedBattleSprite` to group `0x10`
 at derived index `0x61`; it does not modify the native entry formerly used by
@@ -297,7 +312,11 @@ Blue Moon also registers the light in its per-owner deployable list through
 `0x0800B230` and unregisters it through `0x0800B272`. Their structurally
 identical BN6 counterparts are `0x0800F614` and `0x0800F656`. Retaining that
 registration is what exposes the object to DustCross's B+Left suction path;
-collision targetability alone is not sufficient.
+collision targetability alone is not sufficient. BN6's collision presenter
+consumes the collision region argument, so the port explicitly reloads region
+`0x13` at initialization and presents it again on every active frame. This
+keeps the light's 100-HP hurtbox targetable and, together with the deployable
+registration, makes it available to either player's DustCross sweep.
 
 DustCross's suction sweep at `0x080F10B4` walks all eight deployable-list
 entries. For each eligible object, `0x0800F8B0` raises the common removal bit
@@ -457,10 +476,12 @@ command IDs `1`-`4` in that priority order. The beam dispatch table at
 `5,6,7,FD`; Down `1,2,3,4,FF0C,FD`; Right `010A,FD`; and Left `FE,FD`.
 `FD` is the normal damage hit. `FE` dynamically packs the target's decremented
 Custom Screen count with property ID `0x12` and clamps the count at two. The
-port implements that operation with BN6 Custom Level property `0x0A`, reading
-it through the per-side accessor at `0x080136CC` and writing it through the
-setter at `0x080136B0`. The remaining Blue Moon property IDs translate to BN6
-as follows: `5,6,7` zero Attack, Rapid, and Charge (`1,2,3`); `1,2,3,4` clear
+port translates that result to BN6's Custom bug property `0x63` at severity
+1 instead of permanently lowering Custom Level property `0x0A`. Existing
+more-severe Custom bugs are not weakened. Properties are read through the
+per-side accessor at `0x080136CC` and written through the setter at
+`0x080136B0`. The remaining Blue Moon property IDs translate to BN6 as
+follows: `5,6,7` zero Attack, Rapid, and Charge (`1,2,3`); `1,2,3,4` clear
 SuperArmor, FloatShoes, AirShoes, and UnderShirt (`23,1B,1C,1D`); `FF0C`
 restores B-Left to `FF`; and `010A` restores the B button and power attack to
 the default values `0` and `1`. Internal Buster levels are zero-based, so the
@@ -483,11 +504,14 @@ normal attack region 25 before using the native collision helpers. The final
 `FD` event uses SearchMan's exact working region-25 collision initialization
 but LaserMan's quiet cleanup, avoiding the
 six random miss-impact sparkles that SearchMan's own cleanup would create for
-the six panel hits. Command events are applied directly to the opposing
-NaviStats block rather than being misinterpreted as incompatible BN6 extended
-collision effects. Thus no direction has no extra effect, while a held
-direction applies only its documented stat or Custom Window change. BN6's
-collision presenter also consumes the region in
+the six panel hits. Command events use the same six panel-contact objects as
+damage and are translated into opposing NaviStats changes only when BN6's
+collision result at `+0x70` reports contact and that row object occupies the
+opposing Navi's current panel. A trap or obstacle elsewhere in the beam cannot
+authorize the effect, and missed beams have no command effect. The property
+words are not passed through BN6's incompatible extended-effect IDs. Thus no
+direction has no extra effect, while a held direction applies only its
+documented stat or Custom Window change after a hit. BN6's collision presenter also consumes the region in
 `r1`, so the hit reloads 25 after decoding `FD`/command effects rather than
 accidentally presenting the event word as the collision region. Appended
 sprite group `0x0C`/index `0x6A` points at the imported compressed shared archive.
@@ -503,10 +527,16 @@ LaserMan's hand. It also samples and latches commands during the raised-arms
 pose, and now takes an initial sample when the time-freeze summon is created so
 a direction held with the chip-use input is not lost during the cut-in delay.
 Blue Moon gated that parser away from Base; the BN6 port intentionally enables
-it for Base, EX, and SP. After the command stream completes, the port updates
-BN6's cached power-attack and B-Left IDs and clears the corresponding live
-FloatShoes, AirShoes, UnderShirt, and SuperArmor status bits before the damage
-event. Effect events retain the original six-frame
+it for Base, EX, and SP. On each confirmed Down-command contact, the port
+updates BN6's cached B-Left ID and clears the corresponding live FloatShoes,
+AirShoes, UnderShirt, and SuperArmor status bits. It deliberately does not
+rewrite the live power-attack cache unconditionally, because that byte can hold
+a temporary Cross charge shot. Before applying Right, it compares that cache with the old
+underlying power-attack property. Matching values identify a normal modified
+charge shot and permit the cache refresh; a mismatch identifies a temporary
+Cross or other-form override, so Right changes the underlying default Buster
+properties without replacing the active form's charge shot.
+Effect events retain the original six-frame
 cadence. Because the imported full-width beam is stationary in the BN6 object
 model, the sole `FD` damage event is represented on all six panels; only one
 six-object damage event is alive at a time.

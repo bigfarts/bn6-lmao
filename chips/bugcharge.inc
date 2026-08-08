@@ -8,6 +8,7 @@
 .definelabel BUGCHARGE_SFX_FIRE,              0x01E1 // exact BN5 SFX 0x00FF
 .definelabel BUGCHARGE_CONTROLLER_TAG,        0x43434742 // "BGCC"
 .definelabel BUGCHARGE_CHARGE_HEAD_TAG,       0x4F434742 // "BGCO"
+.definelabel BUGCHARGE_ROUTE_MARKER,          0x8B // private; native BgDthThd uses 0x8A
 
 // B code, BN5 rarity/MB cost, Null element, Giga class, and 200 power.
 // Preserve BugRSword's physical library position, version-only availability
@@ -23,7 +24,7 @@
 .else
     .db 0x41
 .endif
-    .db 0x8A,0x15
+    .db BUGCHARGE_ROUTE_MARKER,0x15
     .db 0x26,0x01,0x04,0x00             // shared BugRSword route
     .db 0x00,0x00,0x00,0x00
     .db 0x00,0x05,0x14,0x00
@@ -279,6 +280,11 @@ BugChargeSpawnChargeHead:
     ldrh r0,[r5,0x16]
     strh r0,[r4,0x16]
     str r7,[r4,0x4C]
+    // The shared slot routes replacement objects by the packed marker before
+    // consulting object-tail tags. Inherit the controller's private marker so
+    // this visual cannot fall into a native behavior through reused +0x2C.
+    ldr r0,[r5,0x2C]
+    str r0,[r4,0x2C]
     ldr r0,=BUGCHARGE_CHARGE_HEAD_TAG
     str r0,[r4,0x78]
 @@done:

@@ -10,7 +10,8 @@ graphics.
 ## SearchMan
 
 Replaces CircusMan, CircusMan EX, and CircusMan SP with the complete SearchMan
-chip attack ported from Battle Network 5.
+chip attack ported from Battle Network 5. Its Cursor-element shots destroy
+traps on contact.
 
 - `SerchMan S/*`: 20 damage per shot
 - `SerchMnEX S`: 40 damage per shot
@@ -29,8 +30,9 @@ piercing blue-white laser through the complete row.
 Hold a direction while LaserMan raises his arms to add the original command
 effect. This works for Base, EX, and SP: Up resets Attack/Rapid/Charge to level
 1; Down disables SuperArmor, AirShoes, FloatShoes, Undershirt, and B+Left
-abilities; Right restores the standard charge shot; Left reduces the target's
-next Custom Screen selection by one chip, to a minimum of two.
+abilities; Right restores the standard charge shot without overwriting an
+active Cross charge shot; Left applies Custom bug 1. Command effects require
+the beam to hit the target, so a miss does not alter the target.
 
 Base uses the native red-background menu palette. EX keeps the base LaserMan
 foreground and changes only its five background entries to green. SP uses the
@@ -74,7 +76,8 @@ in front of the user, blocks the opponent's BattleChips for 420 red frames,
 then permits them during a 50-frame green window. It repeats this cycle until
 destroyed. SignalRed is a 61 MB Obstacle-element StandardChip in code S and
 keeps Navi+20's library position. Both versions use its Blue Moon chip art and
-battle sprite.
+battle sprite. Its 100-HP hurtbox remains active throughout the cycle, and
+either player's DustCross can suck it in with B+Left.
 
 ## DethPhnx
 

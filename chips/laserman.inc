@@ -519,18 +519,12 @@ LaserManLaserCommandTick:
     mov r0,0xFD
     cmp r2,r0
     beq @@spawn
-    // Blue Moon's command words are BN4 NaviStats field IDs. They are not
-    // compatible with BN6's collision extended-effect IDs, so translate each
-    // one to the corresponding BN6 opponent property exactly once here.
-    bl LaserManApplyCommandEffect
+    // Resolve command effects through the same row contacts as damage. The
+    // spawned hit object translates the BN4 property word only after BN6
+    // reports a real collision, so commands cannot affect a target they miss.
+    bl LaserManSpawnRowEvent
     b @@done
 @@spawn:
-    // Several BN6 battle abilities and B-button overrides are cached in the
-    // live player object. Refresh that cache after the full command stream and
-    // before FD damage is presented.
-    push {r2}
-    bl LaserManRefreshTargetPlayer
-    pop {r2}
     bl LaserManSpawnRowEvent
 @@done:
     pop {r4,pc}
@@ -603,6 +597,24 @@ LaserManApplyCommandEffect:
     b @@set
 
 @@default_buster:
+    // Record whether the live power-attack cache still matches the underlying
+    // NaviStats value before Right changes it. A mismatch is a temporary
+    // Cross/other-form charge shot and must remain in the live cache.
+    mov r0,r6
+    mov r1,5
+    EngineCall PLAYER_PROPERTY_FOR_SIDE
+    mov r4,r0
+    mov r0,r6
+    EngineCall PLAYER_OBJECT_FOR_SIDE
+    cmp r0,0
+    beq @@set_default_buster
+    ldr r0,[r0,0x58]
+    ldrb r0,[r0,0x07]
+    cmp r0,r4
+    bne @@set_default_buster
+    mov r0,1
+    strb r0,[r5,0x0A]                 // Right may refresh the normal cache
+@@set_default_buster:
     mov r0,r6
     mov r1,4                          // plain B-button MegaBuster
     mov r2,0
@@ -613,14 +625,12 @@ LaserManApplyCommandEffect:
 
 @@custom:
     mov r0,r6
-    mov r1,0x0A
+    mov r1,0x63                       // BN6 Custom bug severity
     EngineCall PLAYER_PROPERTY_FOR_SIDE
-    mov r2,r0
-    cmp r2,2                          // Blue Moon clamps the minimum to two
-    ble @@custom_ready
-    sub r2,1
-@@custom_ready:
-    mov r1,0x0A
+    cmp r0,1
+    bge @@done                        // do not weaken an existing worse bug
+    mov r1,0x63
+    mov r2,1                          // Custom bug 1: one fewer chip next turn
 
 @@set:
     mov r0,r6
@@ -640,20 +650,39 @@ LaserManRefreshTargetPlayer:
     beq @@done
     mov r5,r0
 
-    // Power-attack and B-Left IDs are cached in the live action state.
+    // Right refreshes the power-attack cache only when ApplyCommandEffect saw
+    // that it still matched the old base property. A temporary Cross charge
+    // shot makes those values differ and leaves the guard byte clear.
     ldr r7,[r5,0x58]
+    ldrh r0,[r4,0x06]
+    mov r1,0xFF
+    and r0,r1
+    cmp r0,0x0A
+    bne @@b_left
+    ldrb r0,[r4,0x0A]
+    cmp r0,0
+    beq @@done
     mov r0,r6
     mov r1,5
     EngineCall PLAYER_PROPERTY_FOR_SIDE
     strb r0,[r7,0x07]
+    b @@done
+@@b_left:
+    cmp r0,0x0C
+    bne @@passives
     mov r0,r6
     mov r1,7
     EngineCall PLAYER_PROPERTY_FOR_SIDE
     strb r0,[r7,0x08]
 
     // These four NaviCust abilities also have live player-status bits. Only
-    // clear bits whose source property is now zero; unchanged abilities remain
-    // untouched for the no-command, Up, Right, and Left streams.
+    // Down emits property IDs 1-4; other commands must not touch the cache.
+@@passives:
+    ldrh r0,[r4,0x06]
+    cmp r0,1
+    blt @@done
+    cmp r0,4
+    bgt @@done
     mov r0,r6
     mov r1,0x1B
     EngineCall PLAYER_PROPERTY_FOR_SIDE
@@ -738,6 +767,7 @@ LaserManHitSpawn:
 @@command_effect:
     mov r0,0
     str r0,[r4,0x2C]
+    strb r0,[r4,0x0A]                 // conditional Right-cache guard
     ldr r0,=LASERMAN_HIT_TAG
     str r0,[r4,0x78]
 @@activate:
@@ -804,9 +834,10 @@ LaserManHitInit:
 @@extended:
     mov r0,0xFF
     EngineCall COLLISION_SET_HIT_EFFECT
-    mov r0,0xFF
-    and r0,r1
-    lsr r1,r1,8
+    // BN4 property IDs are not BN6 extended-effect IDs. Keep this a harmless
+    // contact and translate it ourselves after collision resolution.
+    mov r0,0
+    mov r1,0
     EngineCall COLLISION_SET_EXTENDED_EFFECT
 @@present:
     // BN6's presenter consumes r1 as well as the collision pointer. Reload
@@ -821,14 +852,42 @@ LaserManHitInit:
     pop {r7,pc}
 
 LaserManHitUpdate:
-    push {lr}
+    push {r4,lr}
     EngineCall COLLISION_REMOVE
     EngineCall COLLISION_SPAWN_EFFECT
+    ldrh r0,[r5,0x06]
+    cmp r0,0xFD
+    beq @@cleanup
+    ldr r4,[r5,0x54]
+    ldr r0,[r4,0x70]
+    cmp r0,0
+    beq @@cleanup
+    // Region 25 can also contact field objects. Require this particular row
+    // hit to occupy the opposing Navi's panel so a trap/obstacle elsewhere in
+    // the beam cannot authorize a command effect on a missed player.
+    ldrb r0,[r5,0x16]
+    mov r1,1
+    eor r0,r1
+    EngineCall PLAYER_OBJECT_FOR_SIDE
+    cmp r0,0
+    beq @@cleanup
+    ldrb r1,[r5,0x12]
+    ldrb r2,[r0,0x12]
+    cmp r1,r2
+    bne @@cleanup
+    ldrb r1,[r5,0x13]
+    ldrb r2,[r0,0x13]
+    cmp r1,r2
+    bne @@cleanup
+    bl LaserManApplyCommandEffect
+    mov r4,r5
+    bl LaserManRefreshTargetPlayer
+@@cleanup:
     EngineCall COLLISION_CLEAR_REGION
     ldr r0,[r5,0x54]
     EngineCall COLLISION_FREE
     EngineCall OBJECT_FREE
-    pop {pc}
+    pop {r4,pc}
     .pool
 
 .align 4

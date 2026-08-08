@@ -789,6 +789,10 @@ SearchManHitSpawn:
     beq @@done
     strb r1,[r0,0x12]
     strb r2,[r0,0x13]
+    // The attack-family wrapper supplies the chip element in r3. BN5 copies
+    // it into the spawned hit object before collision setup; without this
+    // byte BN6 treats every shot as Null and Cursor hits cannot erase traps.
+    strb r3,[r0,0x0E]
     str r6,[r0,0x2C]
     ldrh r1,[r5,0x16]
     strh r1,[r0,0x16]

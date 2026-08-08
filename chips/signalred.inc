@@ -26,6 +26,13 @@
 .definelabel TYPE4_SIGNALRED_ENTRY,         0x080044D8 // shared type-4 slot 0x84
 .definelabel SIGNALRED_SFX_SPAWN,           0x01DA // relocated slot populated with Blue Moon SFX 0x00A0
 .definelabel SIGNALRED_SFX_GREEN,           0x00D1 // BN6 match for Blue Moon SFX 0x015C
+.if FALZAR
+    .definelabel NATIVE_SHARED_TIMEFREEZE_SPAWN, 0x080E979C
+    .definelabel NATIVE_SHARED_TYPE4_MAIN,       0x080E9570
+.else
+    .definelabel NATIVE_SHARED_TIMEFREEZE_SPAWN, 0x080EAADC
+    .definelabel NATIVE_SHARED_TYPE4_MAIN,       0x080EA8B0
+.endif
 .definelabel DUST_FIRE_SPRITE_TABLE_PTR_0,  0x08012010
 .definelabel DUST_FIRE_SPRITE_TABLE_PTR_1,  0x08012014
 .if FALZAR
@@ -61,32 +68,45 @@ SignalRedDustSpriteTable:
     .dh 0x0D04,0x0010,0x410C,0x0504,0x410C
     .dh (SIGNALRED_BATTLE_SPRITE_INDEX << 8) | 0x10
 
-// Both imported chips use the former BugRSword route. The high half of packed
-// attack word r6 contains record byte 0x0A: BugCharge retains BN5's 0x8A
-// marker while SignalRed uses zero.
+// BugCharge and SignalRed use a route shared by seven native chips. The high
+// half of packed attack word r6 contains record byte 0x0A. SignalRed uses zero
+// and BugCharge uses private marker 0x8B; preserve every other marker through
+// the native launcher (including HubBatch 0x94 and BgDthThd 0x8A).
 SignalRedBugChargeTimeFreezeDispatch:
     push {r0}
     mov r0,r6
     lsr r0,r0,16
-    cmp r0,0x8A
+    cmp r0,BUGCHARGE_ROUTE_MARKER
+    beq @@bugcharge
+    cmp r0,0
+    beq @@signalred
     pop {r0}
-    bne SignalRedTimeFreezeSpawn
+    ldr r3,=NATIVE_SHARED_TIMEFREEZE_SPAWN + 1
+    bx r3
+@@signalred:
+    pop {r0}
+    b SignalRedTimeFreezeSpawn
+@@bugcharge:
+    pop {r0}
     ldr r3,=BugChargeTimeFreezeSpawn + 1
     bx r3
     .pool
 
-// FolderBack installs the final slot hook after this include. Every untagged
-// controller is SignalRed; BugCharge tags both its controller and charge head.
+// FolderBack installs the final slot hook after this include. Route the two
+// private packed markers directly and send every native marker to the original
+// family controller. BugCharge then uses its tail tag to distinguish its
+// controller from its charge-head visual.
 SignalRedBugChargeSharedMain:
-    ldr r0,[r5,0x78]
-    ldr r1,=BUGCHARGE_CONTROLLER_TAG
-    cmp r0,r1
-    beq @@bugcharge
-    ldr r1,=BUGCHARGE_CHARGE_HEAD_TAG
-    cmp r0,r1
-    bne SignalRedTimeFreezeMain
-@@bugcharge:
+    ldr r0,[r5,0x2C]
+    lsr r0,r0,16
+    cmp r0,0
+    beq SignalRedTimeFreezeMain
+    cmp r0,BUGCHARGE_ROUTE_MARKER
+    bne @@native
     ldr r0,=BugChargeSharedMain + 1
+    bx r0
+@@native:
+    ldr r0,=NATIVE_SHARED_TYPE4_MAIN + 1
     bx r0
     .pool
 
@@ -289,7 +309,9 @@ SignalRedObjectInit:
     mov r2,0x14
     mov r3,3
     EngineCall COLLISION_SETUP
-    EngineCall COLLISION_UPDATE_PANEL
+    // BN6's collision presenter consumes r1. Keep the native target region
+    // live explicitly; the extra panel-update call formerly clobbered it.
+    mov r1,0x13
     EngineCall COLLISION_PRESENT
 
     // Blue Moon registers deployables before init, starts on animation 0
@@ -398,6 +420,10 @@ SignalRedPlayGreenSound:
     mov r0,SIGNALRED_SFX_GREEN
     EngineCall PLAY_SOUND
 SignalRedObjectAnimate:
+    // Persistent hurtboxes must be submitted on every active frame. Blue
+    // Moon does this at the end of every traffic-light update as well.
+    mov r1,0x13
+    EngineCall COLLISION_PRESENT
     EngineCall OBJECT_UPDATE
     pop {pc}
 SignalRedObjectBeginDestroy:

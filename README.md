@@ -14,7 +14,8 @@ also imported intact.
 ### SearchMan
 
 Replaces CircusMan, CircusMan EX, and CircusMan SP with the complete SearchMan
-chip attack ported from Battle Network 5.
+chip attack ported from Battle Network 5. Its shots retain Cursor element and
+destroy traps on contact.
 
 - `SerchMan S/*`: 20 damage per shot
 - `SerchMnEX S`: 40 damage per shot
@@ -35,8 +36,11 @@ effect on Base, EX, and SP:
 
 - Up resets Attack, Rapid, and Charge to level 1.
 - Down disables SuperArmor, AirShoes, FloatShoes, Undershirt, and B+Left abilities.
-- Right restores the standard charge shot in place of a modified charge shot.
-- Left reduces the target's next Custom Screen selection by one chip (minimum two).
+- Right restores the standard charge shot without overwriting an active Cross charge shot.
+- Left applies Custom bug 1, reducing the target's next Custom Screen selection by one chip.
+
+Command effects require the beam to contact the target. A missed LaserMan does
+not alter stats, abilities, charge shots, or Custom behavior.
 
 All three are Null-element MegaChips. Base uses Blue Moon's base art palette,
 EX preserves every base LaserMan foreground color while changing only the five
@@ -91,7 +95,8 @@ S and keeps Navi+20's library position. Both versions import the Blue Moon menu
 art and battle sprite. Its placement cue imports Blue Moon's original sample
 and sequence; the green-light cue uses its matching BN6 sound,
 and the light is registered as a normal deployable so DustCross can suck it in
-with B+Left.
+with B+Left. Its 100-HP hurtbox remains active every frame, and either player's
+DustCross can suck it in.
 
 ### DethPhnx
 

@@ -529,7 +529,7 @@ def verify_version(
     verify(bugcharge_record[4:8] == b"\x00\x04\x0A\x02", f"{label} BugCharge rarity/element/Giga class")
     verify(
         bugcharge_record[8:0x10]
-        == bytes((0x4D, 0x41 if replace_bugcharge_art else 0x01, 0x8A, 0x15, 0x26, 0x01, 0x04, 0x00)),
+        == bytes((0x4D, 0x41 if replace_bugcharge_art else 0x01, 0x8B, 0x15, 0x26, 0x01, 0x04, 0x00)),
         f"{label} BugCharge MB/behavior",
     )
     verify(bugcharge_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x05\x14\x00", f"{label} BugCharge parameters/library")
@@ -868,6 +868,13 @@ def verify_version(
         b"\x01\xB4\x30\x1C\x00\x0C\x94\x28\x01\xBC" in search_code,
         f"{label} RollArrow packed-attack discriminator",
     )
+    search_hit_spawn = output[
+        rom_offset(symbol("SearchManHitSpawn")):rom_offset(symbol("SearchManHitMain"))
+    ]
+    verify(
+        b"\x83\x73" in search_hit_spawn,
+        f"{label} SearchMan copies Cursor element into each shot object",
+    )
     verify(chaos_code and any(byte != 0xFF for byte in chaos_code), f"{label} ChaosLrd code")
     verify(
         contains_thumb_bl(
@@ -899,7 +906,13 @@ def verify_version(
     verify(
         output[rom_offset(symbol("ChaosSetOutroTimer")):rom_offset(symbol("ChaosSetOutroTimer")) + 2]
         == b"\x28\x20",
-        f"{label} ChaosLrd preserves Bass's full native exit-animation hold",
+        f"{label} ChaosLrd keeps Bass's native exit timer as a fallback",
+    )
+    chaos_finish_outro = rom_offset(symbol("ChaosFinishOutro"))
+    verify(
+        output[chaos_finish_outro - 14:chaos_finish_outro + 4]
+        == b"\x80\x21\x08\x42\x03\xD1\x28\x8C\x01\x38\x28\x84\x01\xD5\x08\x20\xA8\x60",
+        f"{label} ChaosLrd retires after Bass animation 0x0F ends, with the native timer as fallback",
     )
     verify(
         output[
@@ -943,6 +956,25 @@ def verify_version(
     verify(struct.pack("<I", symbol("BugChargeGospelSprite")) not in bugcharge_code, f"{label} BugCharge sprite selected through relocated table")
     verify(struct.pack("<I", 0x02034887) not in bugcharge_code, f"{label} BugCharge has no BN4 Custom-turn counter")
     verify(signalred_code and any(byte != 0xFF for byte in signalred_code), f"{label} SignalRed code")
+    native_shared_spawn = 0x080E979D if label == "Falzar" else 0x080EAADD
+    native_shared_main = 0x080E9571 if label == "Falzar" else 0x080EA8B1
+    verify(struct.pack("<I", native_shared_spawn) in signalred_code, f"{label} native shared-family spawn route")
+    verify(struct.pack("<I", native_shared_main) in signalred_code, f"{label} native shared-family type-4 route")
+    signalred_shared_main = output[
+        rom_offset(symbol("SignalRedBugChargeSharedMain")):rom_offset(symbol("SignalRedTimeFreezeSpawn"))
+    ]
+    verify(
+        b"\xE8\x6A\x00\x0C\x00\x28" in signalred_shared_main
+        and b"\x8B\x28" in signalred_shared_main,
+        f"{label} replacement markers route before the native shared-slot fallback",
+    )
+    bugcharge_charge_spawn = output[
+        rom_offset(symbol("BugChargeSpawnChargeHead")):rom_offset(symbol("BugChargeChargeHeadMain"))
+    ]
+    verify(
+        b"\xE8\x6A\xE0\x62" in bugcharge_charge_spawn,
+        f"{label} BugCharge charge head inherits the private route marker",
+    )
     verify(folderback_code and any(byte != 0xFF for byte in folderback_code), f"{label} FolderBack code")
     for target in (
         0x080005CD, 0x08002379, 0x0800239B, 0x080033AD,
@@ -1005,9 +1037,17 @@ def verify_version(
         0x08001383, 0x0800138F, 0x0800F615, 0x0800F657, 0x0800F8CF, 0x0800F90F,
         0x08002E3D, 0x08002F5D,
         0x08019893, 0x080198CF, 0x08019FB5,
-        0x0801A04D, 0x0801A019, 0x0801A181,
+        0x0801A019, 0x0801A181,
     ):
         verify(struct.pack("<I", target) in signalred_code, f"{label} SignalRed runtime target 0x{target:08X}")
+    verify(
+        struct.pack("<I", 0x0801A04D) not in signalred_code,
+        f"{label} SignalRed does not clobber its hurtbox region through panel update",
+    )
+    verify(
+        signalred_code.count(struct.pack("<I", 0x0801A019)) >= 2,
+        f"{label} SignalRed submits its hurtbox at init and every active frame",
+    )
     for target in (
         0x0800CC73, 0x0800E277, 0x0800E2AD,
         0x08019893, 0x08019FB5, 0x0801A00F, 0x0801A019,
@@ -1079,6 +1119,52 @@ def verify_version(
     verify(
         hit_init.count(b"\x29\x79") >= 2 and b"\x29\x79\x05\x22" in hit_init,
         f"{label} LaserMan hit reloads spawned collision region for presentation",
+    )
+    command_tick_start = rom_offset(symbol("LaserManLaserCommandTick"))
+    command_tick_end = rom_offset(symbol("LaserManApplyCommandEffect"))
+    verify(
+        contains_thumb_bl(
+            output, command_tick_start, command_tick_end, symbol("LaserManSpawnRowEvent")
+        ),
+        f"{label} LaserMan command events spawn row contacts",
+    )
+    verify(
+        not contains_thumb_bl(
+            output, command_tick_start, command_tick_end, symbol("LaserManApplyCommandEffect")
+        ),
+        f"{label} LaserMan command scheduler does not apply effects before contact",
+    )
+    hit_update_start = rom_offset(symbol("LaserManHitUpdate"))
+    hit_update_end = rom_offset(symbol("LaserManCommandStreams"))
+    hit_update = output[hit_update_start:hit_update_end]
+    verify(
+        b"\x20\x6F\x00\x28" in hit_update
+        and struct.pack("<I", 0x080103BD) in hit_update
+        and contains_thumb_bl(
+            output, hit_update_start, hit_update_end, symbol("LaserManApplyCommandEffect")
+        )
+        and contains_thumb_bl(
+            output, hit_update_start, hit_update_end, symbol("LaserManRefreshTargetPlayer")
+        ),
+        f"{label} LaserMan applies command effects only after target-panel contact",
+    )
+    command_effect = output[
+        rom_offset(symbol("LaserManApplyCommandEffect")):rom_offset(symbol("LaserManRefreshTargetPlayer"))
+    ]
+    verify(
+        command_effect.count(b"\x63\x21") >= 2 and b"\x0A\x21" not in command_effect,
+        f"{label} LaserMan Left applies Custom bug 1 instead of lowering Custom Level",
+    )
+    target_refresh = output[
+        rom_offset(symbol("LaserManRefreshTargetPlayer")):rom_offset(symbol("LaserManSpawnRowEvent"))
+    ]
+    verify(
+        b"\x0A\x28" in target_refresh and target_refresh.count(b"\xF8\x71") == 1,
+        f"{label} LaserMan refreshes the live charge-shot cache only for Right",
+    )
+    verify(
+        b"\xA0\x72" in hit_spawn and b"\xA8\x72" in command_effect,
+        f"{label} LaserMan guards Right's cache refresh against active Cross charge shots",
     )
 
     # BN5's panel predicate takes the ownership mask in r3, with r2 zero.
