@@ -124,7 +124,7 @@ SearchManObjectInit:
     push {lr}
     mov r0,0x80
     mov r1,0x08
-    mov r2,0x11
+    mov r2,SEARCHMAN_BATTLE_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_LOAD_ANIM_DATA
     EngineCall SPRITE_PROPERTY_2E3C
@@ -460,11 +460,11 @@ SearchManReticleMain:
 SearchManReticleInit:
     push {r7,lr}
     mov r1,0x10
-    mov r2,0x15
+    mov r2,SEARCHMAN_RETICLE_SPRITE_INDEX
     ldr r0,[r5,0x64]
     cmp r0,0
     beq @@sprite
-    mov r2,0x14
+    mov r2,SEARCHMAN_RETICLE_ALT_SPRITE_INDEX
 @@sprite:
     mov r0,0x80
     EngineCall SPRITE_LOAD

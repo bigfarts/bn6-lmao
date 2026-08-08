@@ -137,11 +137,11 @@ LaserManActorInit:
     // to separate group/index arguments; preload the relocated compressed
     // archive before either the actor or its beam asks SPRITE_LOAD for it.
     mov r0,0x0C
-    mov r1,0x56
+    mov r1,LASERMAN_BATTLE_SPRITE_INDEX
     EngineCall SPRITE_ALLOC
     mov r0,0x80
     mov r1,0x0C
-    mov r2,0x56
+    mov r2,LASERMAN_BATTLE_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_LOAD_ANIM_DATA
     EngineCall SPRITE_PROPERTY_2E3C
@@ -395,7 +395,7 @@ LaserManLaserInit:
     str r0,[r5,0x34]
     mov r0,0x80
     mov r1,0x0C
-    mov r2,0x56
+    mov r2,LASERMAN_BATTLE_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_LOAD_ANIM_DATA
     EngineCall SPRITE_NO_SHADOW

@@ -239,7 +239,7 @@ BugChainVisualInit:
     push {lr}
     mov r0,0x80
     mov r1,0x10
-    mov r2,0x5C
+    mov r2,BUGCHAIN_BATTLE_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_LOAD_ANIM_DATA
     EngineCall SPRITE_NO_SHADOW

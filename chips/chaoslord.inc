@@ -308,8 +308,8 @@ ChaosFinalizeCompletionRecord:
     EngineCall PLAY_SOUND
     bl ChaosDeleteObjects
     mov r0,8
-    // Preload the imported BN5 aura archive from its translated BN6 slot.
-    mov r1,0x12
+    // Preload the imported BN5 aura archive from its appended BN6 slot.
+    mov r1,CHAOS_AURA_SPRITE_INDEX
     EngineCall SPRITE_ALLOC
 
     // BN5's 0x08105594 table helper: choose the off-screen X coordinate for
@@ -527,7 +527,7 @@ ChaosPhase4:
     bne @@count
     mov r0,0x80
     mov r1,0x10
-    mov r2,0x18
+    mov r2,CHAOS_APPARITION_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_NO_SHADOW
     mov r0,1
@@ -550,7 +550,7 @@ ChaosPhase4:
 
     mov r0,0x80
     mov r1,8
-    mov r2,0
+    mov r2,CHAOS_BASS_MAIN_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_PROPERTY_2E3C
     mov r0,0
@@ -571,9 +571,12 @@ ChaosPhase4:
     EngineCall SPRITE_SET_PALETTE
     EngineCall OBJECT_GET_FLIP
     EngineCall SPRITE_SET_FLIP
-    ldr r4,=0x10011308
+    // SPAWN_TYPE1 copies its implicit r4 argument to object +0x04. Bytes 0/1
+    // are the sprite group/index consumed by ChaosBallInit; derive the index
+    // from the appended Ball Bass pointer-table entry.
+    ldr r4,=0x10010008 | (CHAOS_BASS_BALL_SPRITE_INDEX << 8)
     mov r1,8
-    mov r2,0x13
+    mov r2,CHAOS_BASS_BALL_SPRITE_INDEX
     bl ChaosBallSpawn
     str r0,[r5,0x4C]
     mov r0,0x48
@@ -1105,8 +1108,9 @@ ChaosAttackFly:
     mov r0,0x0F
     mov r1,1
     mov r3,0
-    ldr r4,[r5,0x04]
-    add r4,5
+    // Use the appended eighth native pattern variant. Its new generic-effect
+    // ID resolves to ChaosImpactSprite without replacing BN6 effect 0x45.
+    mov r4,CHAOS_IMPACT_PATTERN_VARIANT
     EngineCall CHAOS_IMPACT_EFFECT
 
     ldrb r0,[r5,0x06]
@@ -1246,8 +1250,8 @@ ChaosAttackSetSprite:
 ChaosAttackSpriteTable:
     .db 0x14,0x08,0x00,0x02
     .db 0x14,0x19,0x00,0x00
-    .db 0x08,0x13,0x27,0x00
-    .db 0x08,0x13,0x28,0x00
+    .db 0x08,CHAOS_BASS_BALL_SPRITE_INDEX,0x27,0x00
+    .db 0x08,CHAOS_BASS_BALL_SPRITE_INDEX,0x28,0x00
 
 // ----- BN5 type-4 0x47 ChaosLord aura -------------------------------------
 
@@ -1272,7 +1276,7 @@ ChaosAuraInit:
     push {lr}
     mov r0,0x80
     mov r1,0x08
-    mov r2,0x12
+    mov r2,CHAOS_AURA_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     ldrb r0,[r5,0x04]
     strb r0,[r5,0x10]
@@ -1491,7 +1495,7 @@ ChaosBurstInit:
     push {lr}
     mov r0,0x80
     mov r1,0x08
-    mov r2,0x12
+    mov r2,CHAOS_AURA_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     mov r0,0x15
     strb r0,[r5,0x10]
@@ -1655,7 +1659,7 @@ ChaosBurstSetPosition:
 //
 // The state machine is shared by BN5 and BN6, but selector 0x12 resolves to
 // different art. This dedicated instance uses the exact BN5 group-0x14/
-// index-0x0D archive relocated to an unused BN6 sprite slot.
+// index-0x0D archive relocated to an appended BN6 sprite slot.
 
 ChaosTeardownMain:
     push {lr}
@@ -1677,7 +1681,7 @@ ChaosTeardownInit:
     push {lr}
     mov r0,0x80
     mov r1,0x10
-    mov r2,0x04
+    mov r2,CHAOS_TEARDOWN_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_LOAD_ANIM_DATA
     EngineCall SPRITE_NO_SHADOW

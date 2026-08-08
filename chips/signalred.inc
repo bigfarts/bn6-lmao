@@ -43,7 +43,7 @@
 // DustCross stores a four-bit obstacle kind for each sucked object. Native
 // BN6 uses kinds 0-14; reserve kind 15 for SignalRed and redirect both the
 // firing path and the version-specific suction sprite loader to the extended
-// table. The new entry selects SignalRed's group 0x10/index 0x1E archive.
+// table. The new entry selects SignalRed's appended group-0x10 archive.
 .org DUST_FIRE_SPRITE_TABLE_PTR_0
 .dw SignalRedDustSpriteTable
 .org DUST_FIRE_SPRITE_TABLE_PTR_1
@@ -59,7 +59,7 @@ SignalRedDustSpriteTable:
     .dh 0x0904,0x240C,0x230C,0x300C,0x0010
     .dh 0x0810,0x1804,0x0A04,0x340C,0x350C
     .dh 0x0D04,0x0010,0x410C,0x0504,0x410C
-    .dh 0x1E10
+    .dh (SIGNALRED_BATTLE_SPRITE_INDEX << 8) | 0x10
 
 // Both imported chips use the former BugRSword route. The high half of packed
 // attack word r6 contains record byte 0x0A: BugCharge retains BN5's 0x8A
@@ -76,13 +76,13 @@ SignalRedBugChargeTimeFreezeDispatch:
     .pool
 
 // FolderBack installs the final slot hook after this include. Every untagged
-// controller is SignalRed; BugCharge tags both its controller and its orbits.
+// controller is SignalRed; BugCharge tags both its controller and charge head.
 SignalRedBugChargeSharedMain:
     ldr r0,[r5,0x78]
     ldr r1,=BUGCHARGE_CONTROLLER_TAG
     cmp r0,r1
     beq @@bugcharge
-    ldr r1,=BUGCHARGE_ORBIT_TAG
+    ldr r1,=BUGCHARGE_CHARGE_HEAD_TAG
     cmp r0,r1
     bne SignalRedTimeFreezeMain
 @@bugcharge:
@@ -255,7 +255,7 @@ SignalRedObjectInit:
     beq @@free
     mov r0,0x80
     mov r1,0x10
-    mov r2,0x1E
+    mov r2,SIGNALRED_BATTLE_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_PROPERTY_2E3C
     mov r0,0

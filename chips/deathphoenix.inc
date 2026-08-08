@@ -95,7 +95,7 @@ DeathPhoenixMain:
 
 DeathPhoenixInit:
     push {lr}
-    ldr r0,=0x00010C57
+    ldr r0,=0x00010C00 | DEATHPHOENIX_BATTLE_SPRITE_INDEX
     EngineCall OBJECT_LOAD_NAVI_SPRITE
     EngineCall OBJECT_GET_FLIP
     EngineCall SPRITE_SET_FLIP
@@ -753,9 +753,9 @@ DeathStrikeMain:
 
 DeathStrikeInit:
     push {lr}
-    // The imported BN5 group-0x10/index-0x49 archive is installed in the
-    // released BN6 group-0x14/index-0x17 pointer slot.
-    ldr r0,=0x01001417
+    // The imported BN5 group-0x10/index-0x49 archive is installed at the end
+    // of BN6's relocated group-0x14 table.
+    ldr r0,=0x01001400 | DEATHPHOENIX_STRIKE_SPRITE_INDEX
     EngineCall OBJECT_LOAD_NAVI_SPRITE
     EngineCall DEATH_SPRITE_SPECIAL
     ldrb r0,[r5]
@@ -906,7 +906,7 @@ DeathStrikeAttack:
 
 // BN5 type-4 0x71, translated directly into released BN6 type-4 slot 0x82.
 // It shares the imported group-0x10/index-0x49 archive with type-4 0x89;
-// that archive is installed at BN6 group 0x14/index 0x17.
+// that archive is appended to BN6 group 0x14.
 DeathFlameSpawn:
     push {lr}
     push {r0,r1,r5}
@@ -965,7 +965,7 @@ DeathFlameInit:
     strh r0,[r5,0x3A]
     mov r0,0x80
     mov r1,0x14
-    mov r2,0x17
+    mov r2,DEATHPHOENIX_STRIKE_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     mov r0,2
     strb r0,[r5,0x10]

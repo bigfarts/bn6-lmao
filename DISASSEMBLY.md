@@ -84,8 +84,8 @@ the expanded ROM rather than assigned fixed output offsets.
 ChaosLrd also imports BN5 group `0x14` entries `0x0D` and `0x14`. Entry
 `0x0D` includes its header at `0x389E68`; dropping that first word selects
 unrelated animation data and causes the visible `MegaBstr` teardown. Entry
-`0x14` supplies the native impact sprite/palette sequence. Both are repointed
-to complete `.autoregion` archives.
+`0x14` supplies the native impact sprite/palette sequence. Both complete
+archives are appended to relocated BN6 tables.
 
 The hit also loads packed value `0x00010401` and calls BN5's type-4 `0x0A`
 palette-object wrapper at `0x080E1158`. Its variant-1 state is the four-frame
@@ -98,12 +98,40 @@ only one leaves either the field or the actors colored. The translated state
 writes and restores both slots together, producing four full-screen white
 frames and returning every palette before the teardown continues.
 
-The unified sprite-table installer in `sprites.inc` applies these SearchMan
-mappings when it rebuilds the complete affected group tables:
+The unified sprite-table installer in `sprites.inc` preserves every native
+pointer and appends these SearchMan mappings:
 
-- group `0x08`, index `0x11` -> actor archive
-- group `0x10`, index `0x14` -> alternate reticle
-- group `0x10`, index `0x15` -> normal reticle
+- group `0x08`, index `0x19` -> actor archive
+- group `0x10`, index `0x5E` -> alternate reticle
+- group `0x10`, index `0x5F` -> normal reticle
+
+Those numbers are outputs of the assembled layout, not duplicated constants.
+Each appended `.dw` has an entry label, and its public index is calculated as
+`(Entry - Table) / 4`. The same pattern derives ChaosLrd's appended generic
+effect ID and pattern variant from their table-entry labels. An archive label
+such as `BugChargeGospelSprite` is only a ROM address; it cannot identify a
+table slot until a pointer-table entry refers to it.
+
+ChaosLrd deliberately appends the Bass archive twice. The main Bass actor and
+Ball Bass animate simultaneously, and BN6 keys its sprite cache by the packed
+group/index selector rather than the resolved archive pointer. Giving both
+objects one selector makes their animation loads overwrite one cache identity
+and produces corrupt composite graphics; distinct entry labels preserve the
+two selectors while still sharing the underlying archive bytes.
+
+Ball Bass has a second selector path that is easy to miss: BN6's type-1
+allocator copies implicit argument `r4` into object word `+0x04`, whose low
+bytes are the sprite group and index read by `ChaosBallInit`. The packed word
+is therefore assembled as `0x10010008 | (CHAOS_BASS_BALL_SPRITE_INDEX << 8)`.
+Changing only the visible `r2` value leaves the old index in the object and
+loads BN6's native white-dot placeholder instead of the Ball Bass composite.
+
+The impact follows the same append-only rule at the metadata level. BN6's
+native generic-effect descriptor `0x45` remains byte-for-byte unchanged at
+group `0x14`/index `0x14`. A relocated descriptor table adds a private effect
+for the appended `ChaosImpactSprite`, and a relocated type-4 `0x24` selector
+table adds a private pattern variant that requests it. Native effect and
+pattern IDs therefore keep their original behavior.
 
 BN5 has base and SP library-art palettes, not an EX palette. The patch keeps
 the base foreground and uses yellow BGR555 values `0x03FF`, `0x0299`, and
@@ -188,22 +216,21 @@ plays the cue at timer 42, matching `0x080E67A4`.
 
 The exact Blue Moon menu assets are relocated from icon `0x74626C` (`0x80`
 bytes), image `0x7315EC` (`0x540` bytes), and palette `0x73F1AC` (`0x20`
-bytes). The aura archive is `0x380CA4`-`0x381C30` (`0xF8C` bytes). Because
-BN6 has no free sprite pointer, the unified installer relocates the complete
-group-`0x08`, `0x0C`, `0x10`, and `0x14` tables after every imported archive
-is defined. It appends the aura to group `0x10` at index `0x5C` and applies
-all ChaosLrd, SearchMan, LaserMan, RollArrow, BugCharge, SignalRed, and
-DeathPhoenix replacements in those same final table images. The original
-tables remain untouched, so no later copy can discard or trample an earlier
-slot patch.
+bytes). The aura archive is `0x380CA4`-`0x381C30` (`0xF8C` bytes). The unified
+installer relocates the complete group-`0x08`, `0x0C`, `0x10`, and `0x14`
+tables and appends every imported archive after each group's native entries.
+BugChain's aura is the first appended group-`0x10` entry, index `0x5C`.
+ChaosLrd, SearchMan, LaserMan, RollArrow, BugCharge, SignalRed, and
+DeathPhoenix use later appended entries in the same final table images. The
+original tables and every native pointer remain byte-for-byte untouched.
 
 ## BugCharge and SignalRed slots
 
 BN6 BugFix remains native at chip ID `0x0B0`: neither its chip record nor its
 family-`0x15`/subfamily-`0x1A` and type-4 `0x3B` dispatch entries are patched.
-BugCharge instead occupies chip ID `0x131`, the Gregar-exclusive BugRSword Giga
-slot previously used by this patch's SignalRed port. It preserves that slot's
-Giga class, library position, and version flag while importing BN5's B code,
+BugCharge instead occupies chip ID `0x131`, the Gregar-exclusive BugRSword
+slot previously used by this patch's SignalRed port. It keeps that physical
+library position and version flag, but uses the Standard class while importing BN5's B code,
 77 MB cost, Null element, and 200 per-shot power.
 
 SignalRed moves to Navi+20's Standard-chip ID `0x0C1`, retaining Navi+20's
@@ -211,9 +238,24 @@ library position. Both imported chips select the former BugRSword
 family-`0x15`/subfamily-`0x26` route. The shared launcher checks record byte
 `0x0A` in packed attack word `r6`: BN5 BugCharge keeps marker `0x8A`, while
 SignalRed uses zero. Their type-4 controllers share slot `0x84`;
-BugCharge's controller and orbit tags select `BugChargeSharedMain`, while the
+BugCharge's controller and charge-head tags select `BugChargeSharedMain`, while the
 untagged path selects `SignalRedTimeFreezeMain`. FolderBack's outer tagged
 dispatcher tail-calls this shared selector for every non-FolderBack object.
+
+Runtime tracing of Colonel BugCharge identifies group `0x0C`/index `0x43` as
+both the stationary and moving Gospel archive. The stationary object is 24
+pixels forward of the user at Z `0x17`. BN5's object code gives this visual a
+fixed 60-tick active state and a 30-tick teardown, so with a high bug count the
+apparition can disappear before the controller finishes launching heads. The
+port instead assigns `55 + 15 * shot_count` to its hold timer, matching the
+controller's 40-frame charge, 15-frame shot cadence, and 30-frame recovery,
+then applies a 16-frame blend fade before freeing the object. The moving object
+begins on the front panel at Z `0x14`, advances 10 pixels per
+frame, and changes its collision panel at the midpoint between panel centers.
+The translated counter consumes BN5's nine property types plus BN6 field
+`0x63`; after clearing it calls BugFix's native `0x0801E658` runtime-state reset
+so an already-latched Custom bug is removed too. Every nonzero BN6 severity
+counts as one active type rather than leaving values greater than one behind.
 
 ## SignalRed port
 
@@ -243,9 +285,9 @@ SignalRed and installs the translated controllers at these hooks:
 | family `0x15`, subfamily `0x26` | `0x02CD4C` | `SignalRedBugChargeTimeFreezeDispatch` |
 | released type-4 slot `0x84` | `0x0044D8` | `FolderBackSharedMain` (then `SignalRedBugChargeSharedMain`) |
 
-The unified sprite installer assigns `SignalRedBattleSprite` to group `0x10`,
-index `0x1E` in the relocated table rather than modifying the old table at
-`0x03201C`.
+The unified sprite installer appends `SignalRedBattleSprite` to group `0x10`
+at derived index `0x61`; it does not modify the native entry formerly used by
+the port.
 
 BN6 has only two genuinely free type-3 slots, already used by SearchMan and
 ChaosLrd. SignalRed therefore shares ChaosLrd's slot `0x2D`: its spawner tags
@@ -266,7 +308,7 @@ either owner-specific bit, native deployables call `0x0800F90E` before cleanup;
 that helper serializes the object's kind, animation, palette, flip, and position
 into DustCross's stored-ammo path. SignalRed uses the otherwise-free four-bit
 kind 15 and redirects DustCross's suction/firing sprite tables to a 16-entry
-copy whose final entry is SignalRed's group `0x10`, index `0x1E` archive. It
+copy whose final entry is SignalRed's group `0x10`, index `0x61` archive. It
 then restores the chip flag, cleans up collision state, unregisters, and frees
 the field object. Collision event `0x40000` is a separate timed wind-removal
 path handled by `0x0800F8CE`; its 20-frame visibility timer owns object byte
@@ -306,7 +348,7 @@ archive occupies BN5 ROM `0x36F074`-`0x36F7BC`; group `0x10`/index `0x48` at
 
 The port translates type-4 `0x89` and `0x71` into released BN6 type-4 slots
 `0x81` and `0x82`. Both use the imported archive through released BN6 sprite
-group `0x14`/index `0x17`. The damage contacts remain separate native BN6
+group `0x14`/index `0x21`. The damage contacts remain separate native BN6
 objects, matching BN5's split between collision and visible flame actors.
 
 After the twelfth strike and the phoenix's disappear phase, the controller
@@ -385,7 +427,7 @@ Roll and the straight-moving arrow. The arrow uses BN6's native collision
 lifecycle with BN4's `8/5/3` setup and hit-effect `9`, so it travels at seven
 pixels per frame, stops on the first real contact, and invokes BN6's built-in
 loaded-chip deletion response rather than manufacturing a damage hit on every
-panel. Relocated group `0x0C` sprite slots `0x5A` and `0x5B` point at the
+panel. Appended group `0x0C` sprite entries `0x6C` and `0x6D` point at the
 runtime-confirmed Blue Moon Roll and heart-arrow archives. The record codes,
 MB values, power, icons, image, and palettes are copied from Blue Moon.
 
@@ -449,8 +491,8 @@ collision effects. Thus no direction has no extra effect, while a held
 direction applies only its documented stat or Custom Window change. BN6's
 collision presenter also consumes the region in
 `r1`, so the hit reloads 25 after decoding `FD`/command effects rather than
-accidentally presenting the event word as the collision region. Relocated
-sprite group `0x0C`/index `0x56` points at the imported compressed shared archive.
+accidentally presenting the event word as the collision region. Appended
+sprite group `0x0C`/index `0x6A` points at the imported compressed shared archive.
 BN6's compressed-sprite preloader takes separate group/index arguments instead
 of BN4's packed selector, and its reused object tails require the beam Z word
 to be cleared explicitly. Translating both details is required for the native

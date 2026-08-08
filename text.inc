@@ -2,47 +2,61 @@
 // Changes are keyed by full chip ID in the Python builder, so replacements in
 // either half are generated together and cannot clobber one another.
 
-.macro WriteArchivePointer,address,target
-    .org address
-    .dw target
-.endmacro
-
-// Folder Edit normally substitutes save-backed names for DblBeast and the
-// local version mascot. Skip the complete exception block so every real chip
-// ID consistently resolves through the relocated chip-name archives.
 .if FALZAR
     .org 0x08120116
     b 0x0812012E
+
+    WriteArchivePointer 0x08027D2C,ChipNameArchive0
+    WriteArchivePointer 0x0802C7C4,ChipNameArchive0
+    WriteArchivePointer 0x08042068,ChipNameArchive0
+    WriteArchivePointer 0x08042080,ChipNameArchive0
+    WriteArchivePointer 0x080476E4,ChipNameArchive0
+    WriteArchivePointer 0x08120178,ChipNameArchive0
+    WriteArchivePointer 0x08120218,ChipNameArchive0
+    WriteArchivePointer 0x08120270,ChipNameArchive0
+    WriteArchivePointer 0x081263B8,ChipNameArchive0
+    WriteArchivePointer 0x08027D30,ChipNameArchive1
+    WriteArchivePointer 0x0802C7C8,ChipNameArchive1
+    WriteArchivePointer 0x0804206C,ChipNameArchive1
+    WriteArchivePointer 0x080476E8,ChipNameArchive1
+    WriteArchivePointer 0x0812017C,ChipNameArchive1
+    WriteArchivePointer 0x0812021C,ChipNameArchive1
+    WriteArchivePointer 0x08120274,ChipNameArchive1
+    WriteArchivePointer 0x081263BC,ChipNameArchive1
+    WriteArchivePointer 0x08027D50,ChipDescriptionArchive0
+    WriteArchivePointer 0x0811968C,ChipDescriptionArchive0
+    WriteArchivePointer 0x0811A08C,ChipDescriptionArchive0
+    WriteArchivePointer 0x08027D54,ChipDescriptionArchive1
+    WriteArchivePointer 0x08119690,ChipDescriptionArchive1
+    WriteArchivePointer 0x0811A090,ChipDescriptionArchive1
 .else
     .org 0x08121EF2
     b 0x08121F0A
+
+    WriteArchivePointer 0x08027D2C,ChipNameArchive0
+    WriteArchivePointer 0x0802C7C4,ChipNameArchive0
+    WriteArchivePointer 0x08042038,ChipNameArchive0
+    WriteArchivePointer 0x08042050,ChipNameArchive0
+    WriteArchivePointer 0x080476B4,ChipNameArchive0
+    WriteArchivePointer 0x08121F54,ChipNameArchive0
+    WriteArchivePointer 0x08121FF4,ChipNameArchive0
+    WriteArchivePointer 0x0812204C,ChipNameArchive0
+    WriteArchivePointer 0x08128194,ChipNameArchive0
+    WriteArchivePointer 0x08027D30,ChipNameArchive1
+    WriteArchivePointer 0x0802C7C8,ChipNameArchive1
+    WriteArchivePointer 0x0804203C,ChipNameArchive1
+    WriteArchivePointer 0x080476B8,ChipNameArchive1
+    WriteArchivePointer 0x08121F58,ChipNameArchive1
+    WriteArchivePointer 0x08121FF8,ChipNameArchive1
+    WriteArchivePointer 0x08122050,ChipNameArchive1
+    WriteArchivePointer 0x08128198,ChipNameArchive1
+    WriteArchivePointer 0x08027D50,ChipDescriptionArchive0
+    WriteArchivePointer 0x0811A9BC,ChipDescriptionArchive0
+    WriteArchivePointer 0x0811B3BC,ChipDescriptionArchive0
+    WriteArchivePointer 0x08027D54,ChipDescriptionArchive1
+    WriteArchivePointer 0x0811A9C0,ChipDescriptionArchive1
+    WriteArchivePointer 0x0811B3C0,ChipDescriptionArchive1
 .endif
-
-WriteArchivePointer CHIP_NAME_0_REFERENCE_0,ChipNameArchive0
-WriteArchivePointer CHIP_NAME_0_REFERENCE_1,ChipNameArchive0
-WriteArchivePointer CHIP_NAME_0_REFERENCE_2,ChipNameArchive0
-WriteArchivePointer CHIP_NAME_0_REFERENCE_3,ChipNameArchive0
-WriteArchivePointer CHIP_NAME_0_REFERENCE_4,ChipNameArchive0
-WriteArchivePointer CHIP_NAME_0_REFERENCE_5,ChipNameArchive0
-WriteArchivePointer CHIP_NAME_0_REFERENCE_6,ChipNameArchive0
-WriteArchivePointer CHIP_NAME_0_REFERENCE_7,ChipNameArchive0
-WriteArchivePointer CHIP_NAME_0_REFERENCE_8,ChipNameArchive0
-
-WriteArchivePointer CHIP_NAME_1_REFERENCE_0,ChipNameArchive1
-WriteArchivePointer CHIP_NAME_1_REFERENCE_1,ChipNameArchive1
-WriteArchivePointer CHIP_NAME_1_REFERENCE_2,ChipNameArchive1
-WriteArchivePointer CHIP_NAME_1_REFERENCE_3,ChipNameArchive1
-WriteArchivePointer CHIP_NAME_1_REFERENCE_4,ChipNameArchive1
-WriteArchivePointer CHIP_NAME_1_REFERENCE_5,ChipNameArchive1
-WriteArchivePointer CHIP_NAME_1_REFERENCE_6,ChipNameArchive1
-WriteArchivePointer CHIP_NAME_1_REFERENCE_7,ChipNameArchive1
-
-WriteArchivePointer CHIP_DESCRIPTION_0_REFERENCE_0,ChipDescriptionArchive0
-WriteArchivePointer CHIP_DESCRIPTION_0_REFERENCE_1,ChipDescriptionArchive0
-WriteArchivePointer CHIP_DESCRIPTION_0_REFERENCE_2,ChipDescriptionArchive0
-WriteArchivePointer CHIP_DESCRIPTION_1_REFERENCE_0,ChipDescriptionArchive1
-WriteArchivePointer CHIP_DESCRIPTION_1_REFERENCE_1,ChipDescriptionArchive1
-WriteArchivePointer CHIP_DESCRIPTION_1_REFERENCE_2,ChipDescriptionArchive1
 
 .autoregion
 .align 4

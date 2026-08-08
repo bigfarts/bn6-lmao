@@ -10,7 +10,6 @@ from pathlib import Path
 
 from build_text_archives import read_archive
 
-
 ROM_BASE = 0x08000000
 CHIP_DATA_OFFSET = 0x21DA8
 CHIP_RECORD_COUNT = 0x13A
@@ -75,7 +74,7 @@ def chip_name_archives(rom: bytes, symbols: dict[str, int]) -> list[list[bytes]]
 
 
 def alphabetical_sort_values(rom: bytes, names: list[bytes]) -> dict[int, int]:
-    """Return compact one-based ranks for records enabled for name sorting."""
+    """Reassign the ROM's native nonzero keys in final-name order."""
     table_end = CHIP_DATA_OFFSET + CHIP_RECORD_COUNT * CHIP_RECORD_SIZE
     if table_end > len(rom):
         raise ValueError("chip data table extends past the end of the ROM")
@@ -85,15 +84,15 @@ def alphabetical_sort_values(rom: bytes, names: list[bytes]) -> dict[int, int]:
             f"need at least {CHIP_RECORD_COUNT}"
         )
 
-    sortable_ids = [
-        chip_id
-        for chip_id in range(CHIP_RECORD_COUNT)
-        if struct.unpack_from(
+    native_values = {
+        chip_id: struct.unpack_from(
             "<H",
             rom,
             CHIP_DATA_OFFSET + chip_id * CHIP_RECORD_SIZE + CHIP_SORT_OFFSET,
         )[0]
-    ]
+        for chip_id in range(CHIP_RECORD_COUNT)
+    }
+    sortable_ids = [chip_id for chip_id, value in native_values.items() if value]
     for chip_id in sortable_ids:
         if not normalized_chip_name(names[chip_id]):
             raise ValueError(f"sortable chip 0x{chip_id:03X} has an empty name")
@@ -102,15 +101,22 @@ def alphabetical_sort_values(rom: bytes, names: list[bytes]) -> dict[int, int]:
         sortable_ids,
         key=lambda chip_id: (chip_name_sort_key(names[chip_id]), chip_id),
     )
-    if len(ordered_ids) > 0xFFFF:
-        raise ValueError("too many sortable chip records for 16-bit sort keys")
-    return {chip_id: rank for rank, chip_id in enumerate(ordered_ids, 1)}
+    # The native values are sparse, reach beyond the number of chip records,
+    # and intentionally contain a few ties. Preserve that complete multiset:
+    # downstream menu code was built around this key domain, so inventing a
+    # compact 1..N sequence is not a compatible way to change the ordering.
+    available_values = sorted(native_values[chip_id] for chip_id in sortable_ids)
+    return dict(zip(ordered_ids, available_values, strict=True))
 
 
-def reorder_chip_sort(rom: bytearray, symbols: dict[str, int]) -> dict[int, int]:
+def reorder_chip_sort(
+    rom: bytearray,
+    symbols: dict[str, int],
+    key_source: bytes | None = None,
+) -> dict[int, int]:
     archives = chip_name_archives(rom, symbols)
     names = [entry for archive in archives for entry in archive]
-    sort_values = alphabetical_sort_values(rom, names)
+    sort_values = alphabetical_sort_values(key_source or rom, names)
     for chip_id, value in sort_values.items():
         struct.pack_into(
             "<H",
@@ -123,12 +129,21 @@ def reorder_chip_sort(rom: bytearray, symbols: dict[str, int]) -> dict[int, int]
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("rom", type=Path, help="final Armips-built ROM to update in place")
+    parser.add_argument(
+        "rom", type=Path, help="final Armips-built ROM to update in place"
+    )
     parser.add_argument("symbols", type=Path, help="Armips symbol file for the ROM")
+    parser.add_argument(
+        "key_source",
+        nargs="?",
+        type=Path,
+        help="clean source ROM whose native sort-key domain must be preserved",
+    )
     args = parser.parse_args()
 
     rom = bytearray(args.rom.read_bytes())
-    sort_values = reorder_chip_sort(rom, read_symbols(args.symbols))
+    key_source = args.key_source.read_bytes() if args.key_source else None
+    sort_values = reorder_chip_sort(rom, read_symbols(args.symbols), key_source)
     args.rom.write_bytes(rom)
     print(f"{args.rom}: reordered {len(sort_values)} chip sort keys")
 

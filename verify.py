@@ -177,69 +177,147 @@ def verify_version(
     sprite_tables = (
         (
             0x31CCC, "ImportedSpriteGroup08Table", 0x31DA4, 0x5C,
-            (
-                (0x00, "ChaosBassSprite", False),
-                (0x11, "SearchManBattleSprite", False),
-                (0x12, "ChaosAuraSprite", True),
-                (0x13, "ChaosBassSprite", False),
-            ),
-            (),
+            (("CHAOS_BASS_MAIN_SPRITE_INDEX", "ChaosBassSprite", False),
+             ("CHAOS_BASS_BALL_SPRITE_INDEX", "ChaosBassSprite", False),
+             ("SEARCHMAN_BATTLE_SPRITE_INDEX", "SearchManBattleSprite", False),
+             ("CHAOS_AURA_SPRITE_INDEX", "ChaosAuraSprite", True)),
         ),
         (
             0x31CD0, "ImportedSpriteGroup0CTable", 0x31E00, 0x1A4,
-            (
-                (0x20, "BugChargeChargeSprite", False),
-                (0x56, "LaserManBattleSprite", True),
-                (0x57, "DeathPhoenixBattleSprite", False),
-                (0x5A, "RollArrowActorSprite", False),
-                (0x5B, "RollArrowProjectileSprite", False),
-            ),
-            (),
+            (("BUGCHARGE_GOSPEL_SPRITE_INDEX", "BugChargeGospelSprite", False),
+             ("LASERMAN_BATTLE_SPRITE_INDEX", "LaserManBattleSprite", True),
+             ("DEATHPHOENIX_BATTLE_SPRITE_INDEX", "DeathPhoenixBattleSprite", False),
+             ("ROLLARROW_ACTOR_SPRITE_INDEX", "RollArrowActorSprite", False),
+             ("ROLLARROW_PROJECTILE_SPRITE_INDEX", "RollArrowProjectileSprite", False)),
         ),
         (
             0x31CD4, "ImportedSpriteGroup10Table", 0x31FA4, 0x170,
-            (
-                (0x04, "ChaosTeardownSprite", False),
-                (0x14, "SearchManReticleAltSprite", False),
-                (0x15, "SearchManReticleSprite", False),
-                (0x18, "ChaosApparitionSprite", False),
-                (0x1E, "SignalRedBattleSprite", False),
-            ),
-            ("BugChainBattleSprite", "BugChargeGospelSprite"),
+            (("BUGCHAIN_BATTLE_SPRITE_INDEX", "BugChainBattleSprite", False),
+             ("CHAOS_TEARDOWN_SPRITE_INDEX", "ChaosTeardownSprite", False),
+             ("SEARCHMAN_RETICLE_ALT_SPRITE_INDEX", "SearchManReticleAltSprite", False),
+             ("SEARCHMAN_RETICLE_SPRITE_INDEX", "SearchManReticleSprite", False),
+             ("CHAOS_APPARITION_SPRITE_INDEX", "ChaosApparitionSprite", False),
+             ("SIGNALRED_BATTLE_SPRITE_INDEX", "SignalRedBattleSprite", False)),
         ),
         (
             0x31CD8, "ImportedSpriteGroup14Table", 0x32114, 0x80,
-            (
-                (0x14, "ChaosImpactSprite", False),
-                (0x17, "DeathPhoenixStrikeSprite", False),
-            ),
-            (),
+            (("CHAOS_IMPACT_SPRITE_INDEX", "ChaosImpactSprite", False),
+             ("DEATHPHOENIX_STRIKE_SPRITE_INDEX", "DeathPhoenixStrikeSprite", False)),
         ),
     )
-    for root_offset, table_name, original_offset, native_length, entries, appended in sprite_tables:
+    for root_offset, table_name, original_offset, native_length, appended in sprite_tables:
         table = rom_offset(symbol(table_name))
         verify(u32(output, root_offset) == symbol(table_name), f"{label} {table_name} root pointer")
-        expected = bytearray(original[original_offset:original_offset + native_length])
-        for index, target, compressed in entries:
-            pointer = symbol(target) | (0x80000000 if compressed else 0)
-            struct.pack_into("<I", expected, index * 4, pointer)
         verify(
-            output[table:table + native_length] == expected,
-            f"{label} {table_name} preserves native and imported pointers",
+            output[table:table + native_length] == original[original_offset:original_offset + native_length],
+            f"{label} {table_name} preserves every native pointer",
         )
-        for append_index, target in enumerate(appended):
+        native_count = native_length // 4
+        for append_index, (index_name, target, compressed) in enumerate(appended):
+            expected_index = native_count + append_index
             verify(
-                u32(output, table + native_length + append_index * 4) == symbol(target),
+                symbol(index_name) == expected_index,
+                f"{label} {index_name} derived from its pointer-table entry",
+            )
+            pointer = symbol(target) | (0x80000000 if compressed else 0)
+            verify(
+                u32(output, table + symbol(index_name) * 4) == pointer,
                 f"{label} {table_name} appended {target} pointer",
             )
     verify(
         output[0x31DA4:0x32194] == original[0x31DA4:0x32194],
         f"{label} original sprite tables remain unmodified",
     )
-    bugcharge_sprite = rom_offset(symbol("BugChargeChargeSprite"))
+    verify(
+        symbol("CHAOS_BASS_MAIN_SPRITE_INDEX")
+        != symbol("CHAOS_BASS_BALL_SPRITE_INDEX"),
+        f"{label} main Bass and Ball Bass retain distinct sprite-cache keys",
+    )
+    chaos_attack_sprite_table = rom_offset(symbol("ChaosAttackSpriteTable"))
+    verify(
+        output[chaos_attack_sprite_table:chaos_attack_sprite_table + 16]
+        == bytes((
+            0x14, 0x08, 0x00, 0x02,
+            0x14, 0x19, 0x00, 0x00,
+            0x08, symbol("CHAOS_BASS_BALL_SPRITE_INDEX"), 0x27, 0x00,
+            0x08, symbol("CHAOS_BASS_BALL_SPRITE_INDEX"), 0x28, 0x00,
+        )),
+        f"{label} Ball Bass stages use the independent appended selector",
+    )
+    chaos_code = output[
+        rom_offset(symbol("ChaosCodeStart")):rom_offset(symbol("ChaosCodeEnd"))
+    ]
+    chaos_ball_spawn_word = (
+        0x10010008 | (symbol("CHAOS_BASS_BALL_SPRITE_INDEX") << 8)
+    )
+    verify(
+        struct.pack("<I", chaos_ball_spawn_word) in chaos_code,
+        f"{label} Ball Bass allocator word uses its appended sprite selector",
+    )
+    if label == "Falzar":
+        generic_effect_pointer = 0xE0634
+        generic_effect_offset = 0xE0398
+        chaos_selector_pointer = 0xE2FDC
+        chaos_selector_offset = 0xE2F48
+    else:
+        generic_effect_pointer = 0xE1970
+        generic_effect_offset = 0xE16D4
+        chaos_selector_pointer = 0xE431C
+        chaos_selector_offset = 0xE4288
+
+    generic_effect_table = rom_offset(symbol("ImportedGenericEffectTable"))
+    verify(
+        u32(output, generic_effect_pointer) == symbol("ImportedGenericEffectTable"),
+        f"{label} relocated generic-effect table pointer",
+    )
+    verify(
+        output[generic_effect_table:generic_effect_table + 0x1B0]
+        == original[generic_effect_offset:generic_effect_offset + 0x1B0],
+        f"{label} preserves native generic effects 0x00-0x6B",
+    )
+    chaos_effect_entry = rom_offset(symbol("ChaosImpactGenericEffectEntry"))
+    chaos_effect_id = symbol("CHAOS_IMPACT_EFFECT_ID")
+    verify(
+        chaos_effect_id == (chaos_effect_entry - generic_effect_table) // 4,
+        f"{label} ChaosLrd generic-effect ID derived from its table entry",
+    )
+    verify(
+        output[chaos_effect_entry:chaos_effect_entry + 4]
+        == bytes((0x14, symbol("CHAOS_IMPACT_SPRITE_INDEX"), 0x00, 0x00)),
+        f"{label} appends ChaosLrd private generic effect",
+    )
+    verify(
+        output[generic_effect_table + 0x45 * 4:generic_effect_table + 0x46 * 4]
+        == original[generic_effect_offset + 0x45 * 4:generic_effect_offset + 0x46 * 4]
+        == bytes((0x14, 0x14, 0x00, 0x00)),
+        f"{label} preserves native generic effect 0x45",
+    )
+
+    chaos_selector_table = rom_offset(symbol("ImportedChaosPatternSelectorTable"))
+    verify(
+        u32(output, chaos_selector_pointer) == symbol("ImportedChaosPatternSelectorTable"),
+        f"{label} relocated Chaos impact-selector table pointer",
+    )
+    verify(
+        output[chaos_selector_table:chaos_selector_table + 0x0E]
+        == original[chaos_selector_offset:chaos_selector_offset + 0x0E],
+        f"{label} preserves all seven native Chaos pattern variants",
+    )
+    chaos_selector_entry = rom_offset(symbol("ChaosImpactPatternSelectorEntry"))
+    chaos_pattern_variant = symbol("CHAOS_IMPACT_PATTERN_VARIANT")
+    verify(
+        chaos_pattern_variant == (chaos_selector_entry - chaos_selector_table) // 2,
+        f"{label} ChaosLrd pattern variant derived from its table entry",
+    )
+    verify(
+        output[chaos_selector_entry:chaos_selector_entry + 2]
+        == bytes((chaos_effect_id, 0x00)),
+        f"{label} appends ChaosLrd private impact pattern",
+    )
+    bugcharge_sprite = rom_offset(symbol("BugChargeGospelSprite"))
     verify(
         output[bugcharge_sprite:bugcharge_sprite + 12]
-        == b"\x10\x00\x01\x03\x0C\x00\x00\x00\x70\x00\x00\x00",
+        == b"\x22\x00\x01\x03\x0C\x00\x00\x00\x34\x00\x00\x00",
         f"{label} BugCharge uncompressed sprite-archive header",
     )
     folderback_type1_table = rom_offset(symbol("FolderBackType1DispatchTable"))
@@ -435,8 +513,7 @@ def verify_version(
         ("BugChargeIcon", 0x74AE3C, 0x80, "BugCharge icon"),
         ("BugChargeImage", 0x730664, 0x540, "BugCharge image"),
         ("BugChargePalette", 0x735D64, 0x20, "BugCharge palette"),
-        ("BugChargeChargeSprite", 0x322158, 0x8EC, "BugCharge charge-orbit archive"),
-        ("BugChargeGospelSprite", 0x348030, 0x6A8, "BugCharge Gospel-head archive"),
+        ("BugChargeGospelSprite", 0x3216D4, 0xA84, "BugCharge Gospel-head archive"),
     ]
     for target, source_offset, length, description in bugcharge_assets:
         start = rom_offset(symbol(target))
@@ -511,7 +588,7 @@ def verify_version(
 
     bugcharge_record = output[BUGCHARGE_RECORD:BUGCHARGE_RECORD + 0x2C]
     verify(bugcharge_record[:4] == b"\x01\xFF\xFF\xFF", f"{label} BN5 BugCharge B code")
-    verify(bugcharge_record[4:8] == b"\x00\x04\x0A\x02", f"{label} BugCharge rarity/element/Giga class")
+    verify(bugcharge_record[4:8] == b"\x00\x04\x0A\x00", f"{label} BugCharge rarity/element/Standard class")
     verify(
         bugcharge_record[8:0x10]
         == bytes((0x4D, 0x41 if replace_bugcharge_art else 0x01, 0x8A, 0x15, 0x26, 0x01, 0x04, 0x00)),
@@ -520,7 +597,7 @@ def verify_version(
     verify(bugcharge_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x05\x14\x00", f"{label} BugCharge parameters/library")
     verify(u16(bugcharge_record, 0x18) == expected_sorts[0x131], f"{label} BugCharge alphabetical sort")
     verify(u16(bugcharge_record, 0x1A) == 200, f"{label} BN5 BugCharge per-shot power")
-    verify(u16(bugcharge_record, 0x1C) == 0x0131, f"{label} BugCharge Giga library position")
+    verify(u16(bugcharge_record, 0x1C) == 0x0131, f"{label} BugCharge physical BugRSword library position")
     verify(bugcharge_record[0x1E:0x20] == b"\x01\xFF", f"{label} BugCharge gate/dark ID")
     if replace_bugcharge_art:
         for field, target in ((0x20, "BugChargeIcon"), (0x24, "BugChargeImage"), (0x28, "BugChargePalette")):
@@ -532,9 +609,9 @@ def verify_version(
         )
     bugcharge_properties = rom_offset(symbol("BugChargeByteProperties"))
     verify(
-        output[bugcharge_properties:bugcharge_properties + 7]
-        == bytes((0x13, 0x14, 0x16, 0x19, 0x18, 0x1A, 0xFF)),
-        f"{label} BN5 BugCharge non-boolean byte-property list",
+        output[bugcharge_properties:bugcharge_properties + 8]
+        == bytes((0x13, 0x14, 0x16, 0x19, 0x18, 0x1A, 0x63, 0xFF)),
+        f"{label} complete BN6 BugCharge non-boolean byte-property list",
     )
 
     verify(
@@ -617,7 +694,8 @@ def verify_version(
     dust_table = rom_offset(symbol("SignalRedDustSpriteTable"))
     verify(
         output[dust_table:dust_table + 0x20]
-        == original[native_dust_table:native_dust_table + 0x1E] + struct.pack("<H", 0x1E10),
+        == original[native_dust_table:native_dust_table + 0x1E]
+        + struct.pack("<H", (symbol("SIGNALRED_BATTLE_SPRITE_INDEX") << 8) | 0x10),
         f"{label} SignalRed DustCross sprite-table extension",
     )
     for pointer_offset in (0x12010, 0x12014, dust_suction_table_reference):
@@ -900,15 +978,15 @@ def verify_version(
     verify(b"\xE0\x20\xFF\x30" in bugchain_code, f"{label} BugChain imported SFX 0x1DF")
     verify(bugcharge_code and any(byte != 0xFF for byte in bugcharge_code), f"{label} BugCharge code")
     for target in (
-        0x080005CD, 0x080026A5, 0x080026E5, 0x08002D81, 0x08002DA5,
+        0x080005CD, 0x080026A5, 0x080026E5, 0x08002DA5,
         0x08003359, 0x080033AD, 0x08003459, 0x0800A18F, 0x0800CC87,
         0x0800E29D, 0x080103BD, 0x08013683,
         0x08019893, 0x080198CF, 0x08019FB5, 0x0801A00F, 0x0801A019,
-        0x0801A075, 0x0801A0D5, 0x0801A141, 0x0801BBF5,
+        0x0801A075, 0x0801A0D5, 0x0801A141, 0x0801BBF5, 0x0801E659,
         0x080302A9,
     ):
         verify(struct.pack("<I", target) in bugcharge_code, f"{label} BugCharge runtime target 0x{target:08X}")
-    verify(struct.pack("<I", symbol("ChaosTrigTable")) in bugcharge_code, f"{label} BugCharge native BN5 orbit table")
+    verify(struct.pack("<I", symbol("BugChargeGospelSprite")) not in bugcharge_code, f"{label} BugCharge sprite selected through relocated table")
     verify(struct.pack("<I", 0x02034887) not in bugcharge_code, f"{label} BugCharge has no BN4 Custom-turn counter")
     verify(signalred_code and any(byte != 0xFF for byte in signalred_code), f"{label} SignalRed code")
     verify(folderback_code and any(byte != 0xFF for byte in folderback_code), f"{label} FolderBack code")
@@ -939,7 +1017,8 @@ def verify_version(
         0x08003007, 0x08002DEB, 0x0801BBAD, death_navi_transition + 1,
     ):
         verify(struct.pack("<I", target) in death_code, f"{label} DeathPhoenix runtime target 0x{target:08X}")
-    verify(struct.pack("<I", 0x01001417) in death_code, f"{label} DeathPhoenix strike sprite selector")
+    death_strike_selector = 0x01001400 | symbol("DEATHPHOENIX_STRIKE_SPRITE_INDEX")
+    verify(struct.pack("<I", death_strike_selector) in death_code, f"{label} DeathPhoenix strike sprite selector")
     verify(struct.pack("<I", 0x080065E0) in death_code, f"{label} DeathPhoenix flame sine table")
     verify(struct.pack("<I", 0x0A050001) in death_code, f"{label} DeathPhoenix contact flags")
     recycle_cleanup = rom_offset(symbol("DeathRecycleCleanup"))
@@ -955,7 +1034,9 @@ def verify_version(
     verify(struct.pack("<I", 0x00300000) in signalred_code, f"{label} SignalRed DustCross suction mask")
     verify(struct.pack("<I", 0x030016F0) in jealousy_code, f"{label} Jealousy BN6 palette staging address")
     verify(struct.pack("<I", 0x030036F0) not in jealousy_code, f"{label} no stale BN5 palette staging address")
-    for target in (0x08002379, 0x0800239B, 0x080E4329):
+    chaos_impact_target = 0x080E2FE9 if label == "Falzar" else 0x080E4329
+    chaos_damage_target = 0x080C536B if label == "Falzar" else 0x080C6BDB
+    for target in (0x08002379, 0x0800239B, chaos_impact_target, chaos_damage_target):
         verify(struct.pack("<I", target) in chaos_code, f"{label} ChaosLrd runtime target 0x{target:08X}")
     for stale_target in (0x0800B917, 0x0800B94D, 0x0800B9B1, 0x0800BC89, 0x0800BD35):
         verify(struct.pack("<I", stale_target) not in chaos_code, f"{label} no stale field handler 0x{stale_target:08X}")
@@ -1019,7 +1100,8 @@ def verify_version(
     )
     actor_init = rom_offset(symbol("LaserManActorInit"))
     verify(
-        output[actor_init:actor_init + 6] == b"\x00\xB5\x0C\x20\x56\x21",
+        output[actor_init:actor_init + 6]
+        == b"\x00\xB5\x0C\x20" + bytes((symbol("LASERMAN_BATTLE_SPRITE_INDEX"), 0x21)),
         f"{label} LaserMan BN6 compressed-archive preload selector",
     )
     laser_init = output[
@@ -1091,6 +1173,8 @@ def verify_version(
         "ImportedSpriteGroup0CTable",
         "ImportedSpriteGroup10Table",
         "ImportedSpriteGroup14Table",
+        "ImportedGenericEffectTable",
+        "ImportedChaosPatternSelectorTable",
     ):
         allocated.append((symbol(table_name), symbol(f"{table_name}End"), table_name))
     for target, _, length, _ in laserman_assets:
@@ -1126,6 +1210,7 @@ def verify_version(
 
     allowed_ranges = [
         interval(0x31CCC, 0x10),
+        interval(generic_effect_pointer, 4), interval(chaos_selector_pointer, 4),
         interval(0x3DE8, 4),
         interval(ROLLARROW_RECORDS, 3 * 0x2C),
         interval(0x2CD64, 4), interval(0x3D5C, 4),

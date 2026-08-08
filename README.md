@@ -71,11 +71,15 @@ palette are imported from Blue Moon in both versions, along with the original
 ### BugCharg
 
 Replaces the former SignalRed/BugRSword slot with BN5 Colonel's BugCharge and
-restores BN6 BugFix. BugCharge is once again a GigaChip: the 77 MB,
+restores BN6 BugFix. BugCharge is a StandardChip: the 77 MB,
 Null-element chip uses code B and fires one 200-damage Gospel shot plus one
-additional shot for every active battle-bug type it clears. Gregar uses the
-imported BugCharge menu art; Falzar retains the inaccessible BugRSword-slot
-art, matching the version-exclusive Giga slot.
+additional shot for every active battle-bug type it clears. It consumes the
+complete BN6 BugFix property set, including the Custom-screen bug, and resets
+BugFix's latched runtime bug state. The stationary Gospel uses BN5's 24-pixel
+forward offset, remains present through the full bug-scaled firing sequence,
+and fades out afterward; each moving head begins on the front panel with BN5's
+native collision timing. Gregar uses the imported BugCharge menu art; Falzar
+retains the inaccessible BugRSword-slot art.
 
 ### SignlRed
 
@@ -114,7 +118,7 @@ The build extracts RollArrow's three menu-art variants, Roll actor and
 heart-arrow archives, summon and firing samples, BugChain's menu art and aura,
 LaserMan's menu art and palettes,
 shared actor/beam archive, and SignalRed's menu art and battle sprite from Blue
-Moon; Jealousy's menu/overlay graphics and BugCharge's menu, orbit, and Gospel
+Moon; Jealousy's menu/overlay graphics and BugCharge's menu and Gospel-head
 assets from BN5; FolderBack's BN3 menu art and original rumble PCM; plus the full BN5
 SearchMan actor archive, both scope/reticle archives, the chip icon, and the
 56x48 library artwork. The SearchMan variant library-art palettes are:
@@ -160,8 +164,9 @@ supplied source ROMs are never modified.
 As a final build step, every nonzero alphabetical-sort key in the main chip
 table is regenerated from the completed relocated name archives. The pass uses
 case-insensitive natural ordering, so renamed chips and numbered or EX/SP
-series appear in name order in both Gregar and Falzar. Zero-keyed special,
-enemy, and unused records remain untouched.
+series appear in name order in both Gregar and Falzar. It reassigns the ROM's
+original sparse key values without inventing a new numeric format; zero-keyed
+special, enemy, and unused records remain untouched.
 
 ## Text archives
 

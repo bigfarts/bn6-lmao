@@ -1,82 +1,151 @@
 // ---------------------------------------------------------------------------
-// Install every imported battle archive together. BN6's sprite root points to
-// separate tables for groups 0x08, 0x0C, 0x10, and 0x14. Relocating all four
-// complete tables here prevents a later table copy from discarding an earlier
-// per-slot patch.
+// Relocate every affected BN6 battle-sprite group without replacing native
+// entries. Each complete native table is copied first; imported archives are
+// appended in stable slots shared by Gregar and Falzar.
 
-.definelabel SPRITE_GROUP08_TABLE_POINTER, 0x08031CCC
-.definelabel SPRITE_GROUP0C_TABLE_POINTER, 0x08031CD0
-.definelabel SPRITE_GROUP10_TABLE_POINTER, 0x08031CD4
-.definelabel SPRITE_GROUP14_TABLE_POINTER, 0x08031CD8
+WriteArchivePointer 0x08031CCC,ImportedSpriteGroup08Table
+WriteArchivePointer 0x08031CD0,ImportedSpriteGroup0CTable
+WriteArchivePointer 0x08031CD4,ImportedSpriteGroup10Table
+WriteArchivePointer 0x08031CD8,ImportedSpriteGroup14Table
 
-.org SPRITE_GROUP08_TABLE_POINTER
-.dw ImportedSpriteGroup08Table
-.org SPRITE_GROUP0C_TABLE_POINTER
-.dw ImportedSpriteGroup0CTable
-.org SPRITE_GROUP10_TABLE_POINTER
-.dw ImportedSpriteGroup10Table
-.org SPRITE_GROUP14_TABLE_POINTER
-.dw ImportedSpriteGroup14Table
-
-// Group 0x08 has 23 native entries. Keep the live BN6 entries and replace the
-// four released/imported slots as one table image.
+// Group 0x08 has 23 native entries (0x00-0x16).
 .autoregion
 .align 4
 ImportedSpriteGroup08Table:
-.dw ChaosBassSprite                         // index 0x00
-.incbin "build/sprite-group08-table.bin",0x04,0x40
-.dw SearchManBattleSprite                   // index 0x11
-.dw ChaosAuraSprite | 0x80000000            // index 0x12, compressed
-.dw ChaosBassSprite                         // index 0x13
-.incbin "build/sprite-group08-table.bin",0x50,0x0C
+    .incbin "build/sprite-group08-table.bin"
+
+    // The main Bass and Ball Bass objects animate simultaneously. Give them
+    // distinct group/index cache keys even though they share one archive.
+    ChaosBassMainSpriteEntry:
+    .dw ChaosBassSprite
+    .definelabel CHAOS_BASS_MAIN_SPRITE_INDEX, (ChaosBassMainSpriteEntry - ImportedSpriteGroup08Table) / 4
+
+    ChaosBassBallSpriteEntry:
+    .dw ChaosBassSprite
+    .definelabel CHAOS_BASS_BALL_SPRITE_INDEX, (ChaosBassBallSpriteEntry - ImportedSpriteGroup08Table) / 4
+
+    SearchManBattleSpriteEntry:
+    .dw SearchManBattleSprite
+    .definelabel SEARCHMAN_BATTLE_SPRITE_INDEX, (SearchManBattleSpriteEntry - ImportedSpriteGroup08Table) / 4
+
+    ChaosAuraSpriteEntry:
+    .dw ChaosAuraSprite | 0x80000000            // compressed
+    .definelabel CHAOS_AURA_SPRITE_INDEX, (ChaosAuraSpriteEntry - ImportedSpriteGroup08Table) / 4
 ImportedSpriteGroup08TableEnd:
 .endautoregion
 
-// Group 0x0C has 105 native entries. BugCharge's BN5 charge-orbit archive is
-// already uncompressed; only LaserMan retains the high compression bit.
+// Group 0x0C has 105 native entries (0x00-0x68).
 .autoregion
 .align 4
 ImportedSpriteGroup0CTable:
-.incbin "build/sprite-group0C-table.bin",0,0x80
-.dw BugChargeChargeSprite                   // index 0x20
-.incbin "build/sprite-group0C-table.bin",0x84,0xD4
-.dw LaserManBattleSprite | 0x80000000       // index 0x56, compressed
-.dw DeathPhoenixBattleSprite                // index 0x57
-.incbin "build/sprite-group0C-table.bin",0x160,0x08
-.dw RollArrowActorSprite                    // index 0x5A
-.dw RollArrowProjectileSprite               // index 0x5B
-.incbin "build/sprite-group0C-table.bin",0x170,0x34
+.incbin "build/sprite-group0C-table.bin"
+
+    BugChargeGospelSpriteEntry:
+    .dw BugChargeGospelSprite
+    .definelabel BUGCHARGE_GOSPEL_SPRITE_INDEX, (BugChargeGospelSpriteEntry - ImportedSpriteGroup0CTable) / 4
+
+    LaserManBattleSpriteEntry:
+    .dw LaserManBattleSprite | 0x80000000       // compressed
+    .definelabel LASERMAN_BATTLE_SPRITE_INDEX, (LaserManBattleSpriteEntry - ImportedSpriteGroup0CTable) / 4
+
+    DeathPhoenixBattleSpriteEntry:
+    .dw DeathPhoenixBattleSprite
+    .definelabel DEATHPHOENIX_BATTLE_SPRITE_INDEX, (DeathPhoenixBattleSpriteEntry - ImportedSpriteGroup0CTable) / 4
+
+    RollArrowActorSpriteEntry:
+    .dw RollArrowActorSprite
+    .definelabel ROLLARROW_ACTOR_SPRITE_INDEX, (RollArrowActorSpriteEntry - ImportedSpriteGroup0CTable) / 4
+
+    RollArrowProjectileSpriteEntry:
+    .dw RollArrowProjectileSprite
+    .definelabel ROLLARROW_PROJECTILE_SPRITE_INDEX, (RollArrowProjectileSpriteEntry - ImportedSpriteGroup0CTable) / 4
+
 ImportedSpriteGroup0CTableEnd:
 .endautoregion
 
-// Group 0x10 has 92 native entries. Append BugChain and the BN5 BugCharge
-// Gospel-head archive at the new indices 0x5C and 0x5D.
+// Group 0x10 has 92 native entries (0x00-0x5B).
 .autoregion
 .align 4
 ImportedSpriteGroup10Table:
-.incbin "build/sprite-group10-table.bin",0,0x10
-.dw ChaosTeardownSprite                     // index 0x04
-.incbin "build/sprite-group10-table.bin",0x14,0x3C
-.dw SearchManReticleAltSprite               // index 0x14
-.dw SearchManReticleSprite                  // index 0x15
-.incbin "build/sprite-group10-table.bin",0x58,0x08
-.dw ChaosApparitionSprite                   // index 0x18
-.incbin "build/sprite-group10-table.bin",0x64,0x14
-.dw SignalRedBattleSprite                   // index 0x1E
-.incbin "build/sprite-group10-table.bin",0x7C,0xF4
-.dw BugChainBattleSprite                    // index 0x5C
-.dw BugChargeGospelSprite                   // index 0x5D
+.incbin "build/sprite-group10-table.bin"
+
+    BugChainBattleSpriteEntry:
+    .dw BugChainBattleSprite
+    .definelabel BUGCHAIN_BATTLE_SPRITE_INDEX, (BugChainBattleSpriteEntry - ImportedSpriteGroup10Table) / 4
+
+    ChaosTeardownSpriteEntry:
+    .dw ChaosTeardownSprite
+    .definelabel CHAOS_TEARDOWN_SPRITE_INDEX, (ChaosTeardownSpriteEntry - ImportedSpriteGroup10Table) / 4
+
+    SearchManReticleAltSpriteEntry:
+    .dw SearchManReticleAltSprite
+    .definelabel SEARCHMAN_RETICLE_ALT_SPRITE_INDEX, (SearchManReticleAltSpriteEntry - ImportedSpriteGroup10Table) / 4
+
+    SearchManReticleSpriteEntry:
+    .dw SearchManReticleSprite
+    .definelabel SEARCHMAN_RETICLE_SPRITE_INDEX, (SearchManReticleSpriteEntry - ImportedSpriteGroup10Table) / 4
+
+    ChaosApparitionSpriteEntry:
+    .dw ChaosApparitionSprite
+    .definelabel CHAOS_APPARITION_SPRITE_INDEX, (ChaosApparitionSpriteEntry - ImportedSpriteGroup10Table) / 4
+
+    SignalRedBattleSpriteEntry:
+    .dw SignalRedBattleSprite
+    .definelabel SIGNALRED_BATTLE_SPRITE_INDEX, (SignalRedBattleSpriteEntry - ImportedSpriteGroup10Table) / 4
+
 ImportedSpriteGroup10TableEnd:
 .endautoregion
 
-// Group 0x14 has 32 native entries.
+// Group 0x14 has 32 native entries (0x00-0x1F).
 .autoregion
 .align 4
 ImportedSpriteGroup14Table:
-.incbin "build/sprite-group14-table.bin",0,0x50
-.dw ChaosImpactSprite                       // index 0x14
-.incbin "build/sprite-group14-table.bin",0x54,0x08
-.dw DeathPhoenixStrikeSprite                // index 0x17
-.incbin "build/sprite-group14-table.bin",0x60,0x20
+.incbin "build/sprite-group14-table.bin"
+
+    ChaosImpactSpriteEntry:
+    .dw ChaosImpactSprite
+    .definelabel CHAOS_IMPACT_SPRITE_INDEX, (ChaosImpactSpriteEntry - ImportedSpriteGroup14Table) / 4
+
+    DeathPhoenixStrikeSpriteEntry:
+    .dw DeathPhoenixStrikeSprite
+    .definelabel DEATHPHOENIX_STRIKE_SPRITE_INDEX, (DeathPhoenixStrikeSpriteEntry - ImportedSpriteGroup14Table) / 4
+
 ImportedSpriteGroup14TableEnd:
+.endautoregion
+
+// BN6 generic effect 0x45 must remain group 0x14/index 0x14 for native users.
+// Relocate the complete native descriptor table and append a private effect
+// whose group/index pair selects ChaosLord's appended impact archive.
+.if FALZAR
+    WriteArchivePointer 0x080E0634,ImportedGenericEffectTable
+    WriteArchivePointer 0x080E2FDC,ImportedChaosPatternSelectorTable
+.else
+    WriteArchivePointer 0x080E1970,ImportedGenericEffectTable
+    WriteArchivePointer 0x080E431C,ImportedChaosPatternSelectorTable
+.endif
+
+.autoregion
+.align 4
+ImportedGenericEffectTable:
+.incbin "build/generic-effect-table.bin"
+
+    ChaosImpactGenericEffectEntry:
+    .db 0x14,CHAOS_IMPACT_SPRITE_INDEX,0x00,0x00
+    .definelabel CHAOS_IMPACT_EFFECT_ID, (ChaosImpactGenericEffectEntry - ImportedGenericEffectTable) / 4
+
+ImportedGenericEffectTableEnd:
+.endautoregion
+
+// Append a private selector/sound pair for ChaosLord instead of changing any
+// native type-4 object 0x24 variant.
+.autoregion
+.align 4
+ImportedChaosPatternSelectorTable:
+.incbin "build/chaos-pattern-selector-table.bin"
+
+    ChaosImpactPatternSelectorEntry:
+    .db CHAOS_IMPACT_EFFECT_ID,0x00
+    .definelabel CHAOS_IMPACT_PATTERN_VARIANT, (ChaosImpactPatternSelectorEntry - ImportedChaosPatternSelectorTable) / 2
+
+ImportedChaosPatternSelectorTableEnd:
 .endautoregion

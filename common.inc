@@ -67,6 +67,7 @@
 .definelabel PLAYER_PROPERTY_SET_FOR_SIDE,0x080136B0
 .definelabel PLAYER_PROPERTY_FOR_SIDE, 0x080136CC
 .definelabel PLAYER_CLEAR_STATUS_FLAGS,0x0801A15C
+.definelabel BUGFIX_CLEAR_RUNTIME_STATE,0x0801E658
 .definelabel ANGLE_FROM_VECTOR,        0x0800117C
 .definelabel COLLISION_CREATE,         0x08019892
 .definelabel COLLISION_FREE,           0x080198CE
@@ -100,10 +101,14 @@
 .definelabel BUGCHARGE_GOSPEL_TAG,       0x47434742 // "BGCG"
 
 // Battle-effect helpers used by BN5's dormant ChaosLord Ball Bass object.
-// These are the matching BN6 implementations, identified by their complete
-// state setup and object-layout behavior rather than by address deltas.
+// Gregar and Falzar contain matching implementations at different addresses.
+.if FALZAR
+.definelabel CHAOS_IMPACT_EFFECT,      0x080E2FE8
+.definelabel CHAOS_DAMAGE_OBJECT,      0x080C536A
+.else
 .definelabel CHAOS_IMPACT_EFFECT,      0x080E4328
 .definelabel CHAOS_DAMAGE_OBJECT,      0x080C6BDA
+.endif
 .definelabel CHAOS_PALETTE_WRITE,      0x08002378
 .definelabel CHAOS_PALETTE_RESTORE,    0x0800239A
 
@@ -116,4 +121,9 @@
     pop {r4}
     mov lr,pc
     bx r12
+.endmacro
+
+.macro WriteArchivePointer,address,target
+    .org address
+    .dw target
 .endmacro

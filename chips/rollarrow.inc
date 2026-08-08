@@ -101,7 +101,7 @@ RollArrowActorInit:
     push {lr}
     mov r0,0x80
     mov r1,0x0C
-    mov r2,0x5A
+    mov r2,ROLLARROW_ACTOR_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_LOAD_ANIM_DATA
     EngineCall SPRITE_PROPERTY_2E3C
@@ -350,7 +350,7 @@ RollArrowProjectileInit:
     bne @@free
     mov r0,0x80
     mov r1,0x0C
-    mov r2,0x5B
+    mov r2,ROLLARROW_PROJECTILE_SPRITE_INDEX
     EngineCall SPRITE_LOAD
     EngineCall SPRITE_LOAD_ANIM_DATA
     EngineCall SPRITE_NO_SHADOW
