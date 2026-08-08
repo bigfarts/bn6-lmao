@@ -37,7 +37,7 @@
 .align 4
 JealousyCodeStart:
 
-// BN5 attack-family wrapper at 0x080E4540, translated to LifeSync's released
+// BN5 attack-family wrapper at 0x080E4540, translated to the unused native
 // BN6 Type-4 hub. r6 is the attack ID and r7 is the time-freeze completion
 // pointer supplied by the common attack-family dispatcher.
 JealousyTimeFreezeSpawn:

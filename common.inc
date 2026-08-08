@@ -93,9 +93,9 @@
 // Every imported battle object uses one project-owned dispatch ID per native
 // object class.  The allocator still creates independent object records; the
 // word at +0x7C selects the logical controller behind the shared ID.
-.definelabel CUSTOM_TYPE1_ID,           0x30 // released HeatMan family
+.definelabel CUSTOM_TYPE1_ID,           0x31 // unused native entry
 .definelabel CUSTOM_TYPE3_ID,           0x2C // genuinely free native entry
-.definelabel CUSTOM_TYPE4_ID,           0x5C // released LifeSync family
+.definelabel CUSTOM_TYPE4_ID,           0x17 // unused native entry
 .definelabel CUSTOM_OBJECT_KIND,        0x7C
 
 // Shared native lifecycle used by invisible type-4 time-freeze chip

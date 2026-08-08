@@ -41,9 +41,9 @@ contain a usable SearchMan actor/reticle/hit set.
 | Hook | BN6 file offset | Patched target |
 | --- | ---: | ---: |
 | time-freeze subfamily `0x0E` | `0x02CD94` | `SearchManTimeFreezeSpawn` |
-| shared type-1 ID `0x30` | `0x003D5C` | `CustomType1Main` |
+| shared type-1 ID `0x31` | `0x003D60` | `CustomType1Main` |
 | shared type-3 ID `0x2C` | `0x003F74` | `CustomType3Main` |
-| shared type-4 ID `0x5C` | `0x004438` | `CustomType4Main` |
+| shared type-4 ID `0x17` | `0x004324` | `CustomType4Main` |
 
 The three object hooks are project-wide rather than SearchMan-specific. Every
 imported object keeps its native BN6 class, claims that class's single custom
@@ -52,8 +52,9 @@ that kind to select the real controller from one table per class. Each kind is
 derived inline from its table entry as `(Entry - Table) / 4 + 1`, following the
 same pattern as the derived indices in `sprites.inc`; there is no separately
 maintained list of numeric kind labels. A zero, stale, or out-of-range kind
-frees the object instead of interpreting it as another controller. All former
-feature-specific object entries remain native and unmodified.
+frees the object instead of interpreting it as another controller. The shared
+hubs claim unused native entries; the released HeatMan `0x30` and LifeSync
+`0x5C` object entries remain byte-for-byte original.
 
 Runtime code and imported assets are allocated from file offset `0x800000`
 onward in an expanded 16 MiB image; exact addresses are selected by Armips.
@@ -183,12 +184,15 @@ count once. Its final 90-frame state refreshes the native chip-delete overlay
 and runs the original link-battle cleanup calls before entering the generic
 type-4 outro.
 
-LifeSync is chip ID `0xBF` in BN6. Its released launcher and object entry are:
+LifeSync is chip ID `0xBF` in BN6. Its released launcher is reused, while the
+object controller uses the project-wide unused Type 4 entry:
 
 | Hook | BN6 file offset | Patched target |
 | --- | ---: | ---: |
 | family `0x15`, subfamily `0x07` | `0x02CCD0` | `JealousyTimeFreezeSpawn` |
-| shared type-4 ID `0x5C` | `0x004438` | `CustomType4Main` |
+| shared type-4 ID `0x17` | `0x004324` | `CustomType4Main` |
+
+LifeSync's released object entry `0x5C` remains native and unmodified.
 
 BN6 retains direct equivalents of all five generic type-4 lifecycle states and
 of Jealousy's side comparison, chip-list lookup, panel predicate, overlay,
@@ -224,7 +228,7 @@ its owner for 50 frames. At timer value 42, `0x080E67A4` plays SFX `0x15D`.
 BN6 CopyDamage is chip ID `0xBE`. The port keeps that Standard-chip library
 slot and uses the unused family-`0x15`/subfamily-`0x22` dispatch at file offset
 `0x02CD3C`. Its controller and aura use the project-wide custom type-4 ID
-`0x5C`, with distinct inline-derived kinds selecting their controllers. The
+`0x17`, with distinct inline-derived kinds selecting their controllers. The
 common BN6 time-freeze lifecycle supplies the intro, freeze, outro, and cleanup
 states. BN6 no longer keeps Blue Moon's
 battle-kind enum in the same byte: its native link-only paths instead read the
@@ -270,7 +274,7 @@ marker `0x8B` rather than BN5's `0x8A`, because native BgDthThd already uses
 `0x8A`; HubBatch uses `0x94`. Every marker other than zero and `0x8B` is
 forwarded to the original version-specific launcher, preserving PunchArm,
 NeedlArm, PuzzlArm, BoomrArm, DarkInvs, HubBatch, and BgDthThd. The two imported
-controllers are then spawned through the shared custom type-4 ID `0x5C` and
+controllers are then spawned through the shared custom type-4 ID `0x17` and
 distinguished by their `+0x7C` kinds. BugCharge's charge-head visual has its own
 kind in the same table. Native type-4 entry `0x84` is no longer patched, and
 FolderBack is another direct entry in the shared custom table rather than an
@@ -316,7 +320,7 @@ SignalRed and installs the translated controllers at these hooks:
 | Hook | BN6 file offset | Patched target |
 | --- | ---: | ---: |
 | family `0x15`, subfamily `0x26` | `0x02CD4C` | `SignalRedBugChargeTimeFreezeDispatch` |
-| shared type-4 ID `0x5C` | `0x004438` | `CustomType4Main` |
+| shared type-4 ID `0x17` | `0x004324` | `CustomType4Main` |
 
 The unified sprite installer appends `SignalRedBattleSprite` to group `0x10`
 at derived index `0x61`; it does not modify the native entry formerly used by
@@ -406,11 +410,11 @@ archive occupies BN5 ROM `0x36F074`-`0x36F7BC`; group `0x10`/index `0x48` at
 `0x36E908` is a different vertical-column effect.
 
 The port translates type-4 `0x89` and `0x71` into distinct strike and flame
-kinds behind the shared custom type-4 ID `0x5C`. Both use the imported archive
+kinds behind the shared custom type-4 ID `0x17`. Both use the imported archive
 through released BN6 sprite group `0x14`/index `0x21`. The damage contacts
 remain separate native BN6 objects, matching BN5's split between collision and
 visible flame actors. The main DeathPhoenix controller likewise uses its own
-kind behind the shared custom type-1 ID `0x30`.
+kind behind the shared custom type-1 ID `0x31`.
 
 After the twelfth strike and the phoenix's disappear phase, the controller
 checks BN6's saved-Navi record at `0x0203C960`. The record's backing pointer is
@@ -484,7 +488,7 @@ this port.
 The BN6 port keeps TrainArrow's IDs `0x18`-`0x1A`, routes them through the
 already released Navi-family dispatch used by SearchMan, and distinguishes the
 three IDs in that shared launcher. Roll uses the shared custom type-1 ID
-`0x30`, while the straight-moving arrow uses the shared custom type-3 ID
+`0x31`, while the straight-moving arrow uses the shared custom type-3 ID
 `0x2C`. The arrow uses BN6's native collision
 lifecycle with BN4's `8/5/3` setup and hit-effect `9`, so it travels at seven
 pixels per frame, stops on the first real contact, and invokes BN6's built-in
@@ -539,7 +543,7 @@ transforms rather than collapsing to the yellow palette-only appearance.
 
 The BN6 port retains HeatMan's IDs `0xE3`-`0xE5`, family `0x1B`, and subfamily
 `0x02`, replacing that family's dispatch at `0x0802CD64`. The shared custom
-type-1 ID `0x30` hosts the actor and visible beam under separate kinds. Both use foreground
+type-1 ID `0x31` hosts the actor and visible beam under separate kinds. Both use foreground
 OAM priority 1, which places the beam in front of targets and field objects;
 the earlier-allocated actor still wins their same-priority overlap at the
 muzzle. LaserMan's row-hit objects use their own kind behind shared custom

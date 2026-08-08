@@ -1,12 +1,12 @@
 // ---------------------------------------------------------------------------
 // Project-owned object dispatch hubs.  BN6's allocator stores an object's
 // native class separately from its one-byte family ID.  All imported objects
-// of a class use one released family and select their logical main through the
-// stable kind word at object +0x7C.
+// of a class use one unused native entry and select their logical main through
+// the stable kind word at object +0x7C.
 
-.definelabel TYPE1_CUSTOM_ENTRY, 0x08003D5C // family 0x30
+.definelabel TYPE1_CUSTOM_ENTRY, 0x08003D60 // family 0x31
 .definelabel TYPE3_CUSTOM_ENTRY, 0x08003F74 // family 0x2C
-.definelabel TYPE4_CUSTOM_ENTRY, 0x08004438 // family 0x5C
+.definelabel TYPE4_CUSTOM_ENTRY, 0x08004324 // family 0x17
 
 .org TYPE1_CUSTOM_ENTRY
 .dw CustomType1Main + 1

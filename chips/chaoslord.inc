@@ -134,8 +134,8 @@ ChaosReleaseCompletion:
 //
 // BN6 also has a type-1 0x57 object, but it adds BN6-only palette, animation,
 // and visibility branches. Those branches turn ChaosLord's dotted Ball Bass
-// sequence into a short white/cyan orb. Keep the BN5 state machine intact in
-// released type-1 slot 0x52 and translate only the engine entry points.
+// sequence into a short white/cyan orb. Keep the BN5 state machine intact
+// behind its custom Type-1 hub kind and translate only the engine entry points.
 
 ChaosBallMain:
     push {lr}
