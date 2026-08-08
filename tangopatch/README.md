@@ -80,8 +80,9 @@ then permits them during a 50-frame green window. It repeats this cycle until
 destroyed. SignalRed is a 61 MB Obstacle-element StandardChip in code S and
 keeps Navi+20's library position. Both versions use its Blue Moon chip art and
 battle sprite. Its 100-HP hurtbox remains active throughout the cycle, and
-either player's DustCross can suck it in with B+Left. It cannot trigger Rush,
-Beat, or traps, and dimming cut-ins do not stall either peer.
+either player's DustCross can suck it in with B+Left. Its activation flags do
+not advertise Image Invis to Rush, and its passive field collision does not
+trigger Beat or traps. Dimming cut-ins do not stall either peer.
 
 ## DethPhnx
 

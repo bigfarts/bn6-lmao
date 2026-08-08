@@ -332,10 +332,12 @@ Blue Moon does; clearing either complete word prevents incoming attacks from
 resolving against the light. BN4's numeric collision regions cannot be copied
 literally because BN6 assigns different semantics to those indexes. SignalRed
 therefore uses BN6's passive, destructible field-object pair `14/15`, the same
-pair as a settled RockCube, and resubmits region `14` every frame. The earlier
-`7/5` translation produced an active attack-class collision record carrying a
-Rush-reactive mask, so it incorrectly woke Rush as soon as the hurtbox became
-live. The port allocates the record at object initialization but defers
+pair as a settled RockCube, and resubmits region `14` every frame. This affects
+the persistent light's targetability and damage resolution; Rush eligibility
+is decided earlier by `0x08010740`, which tests bit `0x02` of chip-record byte
+`0x16`. SignalRed clears only that bit (`0xC6` to `0xC4`) so its activation is
+not classified as Image Invis. The port allocates the record at object
+initialization but defers
 setup/presentation until time stop ends, so the persistent hurtbox begins in
 normal battle time. Each active frame then clears prior hit presentation,
 collects the five element-specific

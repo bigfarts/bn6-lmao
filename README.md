@@ -100,8 +100,10 @@ and sequence; the green-light cue uses its matching BN6 sound,
 and the light is registered as a normal deployable so DustCross can suck it in
 with B+Left. Its 100-HP hurtbox remains active every frame, and either player's
 DustCross can suck it in. Its native RockCube-class passive collision is enabled
-after the cut-in ends, so it cannot trigger Rush, Beat, or traps; dimming
-cut-ins also pause its red/green state transition without stalling either peer.
+after the cut-in ends, so it does not trigger Beat or traps. Its chip-activation
+flags also clear BN6's Image Invis classification bit, so playing it does not
+wake Rush. Dimming cut-ins also pause its red/green state transition without
+stalling either peer.
 
 ### DethPhnx
 

@@ -17,7 +17,9 @@
     .db 0x3D,0x41,0x00,0x15
     .db 0x26,0x0A,0x04,0x00
     .db 0x00,0x00,0x00,0x00
-    .db 0x00,0x14,0xC6,0x40
+    // Clear chip flag 0x02 at record offset 0x16. BN6's Rush handler tests
+    // that bit at activation time to identify Image Invis-class chips.
+    .db 0x00,0x14,0xC4,0x40
     .dh 0x0141,0,0x00C6
     .db 0x01,0xFF
     .dw SignalRedIcon,SignalRedImage,SignalRedPalette
@@ -296,8 +298,7 @@ SignalRedObjectInit:
 
     // Blue Moon's object is a normal target with 100 HP. Use BN6's native
     // passive, destructible field-object pair (14/15, the settled RockCube
-    // pair) so incoming attacks resolve without advertising a Rush-reactive
-    // attack class.
+    // pair) so incoming attacks resolve against a normal field obstacle.
     mov r0,100
     strh r0,[r5,0x24]
     strh r0,[r5,0x26]

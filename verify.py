@@ -592,7 +592,8 @@ def verify_version(
         == b"\x3D\x41\x00\x15\x26\x0A\x04\x00",
         f"{label} SignalRed MB/behavior",
     )
-    verify(signalred_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x14\xC6\x40", f"{label} SignalRed parameters/library")
+    verify(signalred_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x14\xC4\x40", f"{label} SignalRed parameters/library")
+    verify(signalred_record[0x16] & 0x02 == 0, f"{label} SignalRed does not advertise Image Invis to Rush")
     verify(u16(signalred_record, 0x18) == expected_sorts[0x0C1], f"{label} SignalRed alphabetical sort")
     verify(u16(signalred_record, 0x1A) == 0, f"{label} SignalRed displayed power")
     verify(u16(signalred_record, 0x1C) == 0x00C6, f"{label} SignalRed Standard library position")
