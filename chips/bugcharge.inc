@@ -551,10 +551,11 @@ BugChargeProjectileInit:
     EngineCall COLLISION_SETUP
     mov r0,0xFF
     EngineCall COLLISION_SET_HIT_EFFECT
-    // BN5 kind 1 writes 0x20 to collision property 0x10. This prevents the
-    // first Gospel contact from suppressing the remaining bug-driven shots.
-    mov r0,0x20
+    // BN5 kind 1 writes zero to collision property 0x10, then clears the
+    // collision's one-contact latch before presenting it.
+    mov r0,0
     EngineCall 0x0801A258
+    EngineCall COLLISION_CLEAR_REGION
     EngineCall COLLISION_PRESENT
     mov r0,4
     str r0,[r5,0x08]

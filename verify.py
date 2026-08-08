@@ -227,9 +227,9 @@ def verify_version(
     verify(
         all(
             u32(output, folderback_type1_table + index * 4) == symbol("FolderBackType1Main") + 1
-            for index in range(94)
+            for index in range(0x5F)
         ),
-        f"{label} FolderBack type-1 proxy table",
+        f"{label} FolderBack type-1 proxy table includes counter family 0x5E",
     )
     verify(output[0x3E00:0x3E08] == original[0x3E00:0x3E08], f"{label} unused RollArrow type-1 slots")
     verify(output[0x3D70:0x3D78] == original[0x3D70:0x3D78], f"{label} native type-1 projectile slots")

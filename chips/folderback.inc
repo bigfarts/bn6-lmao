@@ -174,9 +174,10 @@ FolderBackUnlockOpponent:
     bne @@loop
     pop {r6,r7,pc}
 
-// The native type-1 table contains 94 actor families. The proxy table sends
-// each one through the same guard, which looks up and tail-calls the original
-// family main whenever the current object is not locked by FolderBack.
+// The native type-1 table contains 95 actor families (0x00 through 0x5E).
+// Family 0x5E is the native counter-hit response object. The proxy table sends
+// every family through the same guard, which looks up and tail-calls the
+// original family main whenever the current object is not locked by FolderBack.
 FolderBackType1Main:
     push {r4,r6,r7,lr}
     ldr r6,=FOLDERBACK_TYPE4_OBJECT_BASE
@@ -228,6 +229,7 @@ FolderBackType1DispatchTable:
     .dw FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1
     .dw FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1
     .dw FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1,FolderBackType1Main + 1
+    .dw FolderBackType1Main + 1 // native counter-hit response family 0x5E
 
 // Ordinary chip attacks wait on the completion byte supplied in r7. Native
 // non-time-freeze type-4 controllers set it to one before freeing themselves.
