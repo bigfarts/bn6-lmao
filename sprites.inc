@@ -102,50 +102,9 @@ ImportedSpriteGroup10TableEnd:
 ImportedSpriteGroup14Table:
 .incbin "build/sprite-group14-table.bin"
 
-    ChaosImpactSpriteEntry:
-    .dw ChaosImpactSprite
-    .definelabel CHAOS_IMPACT_SPRITE_INDEX, (ChaosImpactSpriteEntry - ImportedSpriteGroup14Table) / 4
-
     DeathPhoenixStrikeSpriteEntry:
     .dw DeathPhoenixStrikeSprite
     .definelabel DEATHPHOENIX_STRIKE_SPRITE_INDEX, (DeathPhoenixStrikeSpriteEntry - ImportedSpriteGroup14Table) / 4
 
 ImportedSpriteGroup14TableEnd:
-.endautoregion
-
-// BN6 generic effect 0x45 must remain group 0x14/index 0x14 for native users.
-// Relocate the complete native descriptor table and append a private effect
-// whose group/index pair selects ChaosLord's appended impact archive.
-.if FALZAR
-    WriteArchivePointer 0x080E0634,ImportedGenericEffectTable
-    WriteArchivePointer 0x080E2FDC,ImportedChaosPatternSelectorTable
-.else
-    WriteArchivePointer 0x080E1970,ImportedGenericEffectTable
-    WriteArchivePointer 0x080E431C,ImportedChaosPatternSelectorTable
-.endif
-
-.autoregion
-.align 4
-ImportedGenericEffectTable:
-.incbin "build/generic-effect-table.bin"
-
-    ChaosImpactGenericEffectEntry:
-    .db 0x14,CHAOS_IMPACT_SPRITE_INDEX,0x00,0x00
-    .definelabel CHAOS_IMPACT_EFFECT_ID, (ChaosImpactGenericEffectEntry - ImportedGenericEffectTable) / 4
-
-ImportedGenericEffectTableEnd:
-.endautoregion
-
-// Append a private selector/sound pair for ChaosLord instead of changing any
-// native type-4 object 0x24 variant.
-.autoregion
-.align 4
-ImportedChaosPatternSelectorTable:
-.incbin "build/chaos-pattern-selector-table.bin"
-
-    ChaosImpactPatternSelectorEntry:
-    .db CHAOS_IMPACT_EFFECT_ID,0x00
-    .definelabel CHAOS_IMPACT_PATTERN_VARIANT, (ChaosImpactPatternSelectorEntry - ImportedChaosPatternSelectorTable) / 2
-
-ImportedChaosPatternSelectorTableEnd:
 .endautoregion

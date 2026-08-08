@@ -378,11 +378,11 @@ ChaosFinalizeCompletionRecord:
     bl ChaosSpawnAura
     pop {r1-r3}
 
-    // BN6 gives this time-freeze actor 29 fewer callbacks than BN5 did. Take
-    // those frames from the passive opening aura hold so Bass's animation
-    // 0x0F can retain its complete 40-frame fade and finish before cleanup.
+    // Preserve BN5's complete opening hold so Nebula Gray fades on its native
+    // schedule. Phase 16 reclaims BN6's callback budget only after Bass's
+    // visible exit animation has actually ended.
 ChaosSetIntroTimer:
-    mov r0,0x71
+    mov r0,0x8E
     strh r0,[r5,0x20]
     EngineCall OBJECT_FRONT_DIRECTION
     ldr r1,=0x00009D89 // (32 << 16) / 52
@@ -721,8 +721,8 @@ ChaosPhase12:
     mov r0,0x0F
     strb r0,[r5,0x10]
     // This is Bass's own final animation, not the separate teardown effect.
-    // Keep BN5's complete 40-frame hold; controller init reclaimed BN6's
-    // smaller callback budget from the passive opening aura instead.
+    // Keep BN5's timer as a fallback, but Phase 16 exits as soon as animation
+    // 0x0F reports its real end instead of waiting through invisible padding.
 ChaosSetOutroTimer:
     mov r0,0x28
     strh r0,[r5,0x20]
@@ -736,14 +736,21 @@ ChaosPhase12Done:
 
 ChaosPhase16:
     push {lr}
+ChaosCheckOutroAnimation:
+    EngineCall SPRITE_GET_ANIMATION_FLAGS
+    mov r1,0x80
+    tst r0,r1
+    bne ChaosFinishOutro
     ldrh r0,[r5,0x20]
     sub r0,1
     strh r0,[r5,0x20]
-    bpl @@done
+    bpl ChaosPhase16Done
+ChaosFinishOutro:
     mov r0,8
     str r0,[r5,0x08]
-@@done:
+ChaosPhase16Done:
     pop {pc}
+    .pool
 
 // BN5 helper at 0x080C32A2. ChaosLord removes the eight live obstacle/object
 // references before its entrance, exactly as the original chip does.
@@ -1046,7 +1053,7 @@ ChaosAttackForm:
     ldrh r0,[r5,0x20]
     sub r0,1
     strh r0,[r5,0x20]
-    bpl @@done
+    bpl ChaosAttackSpawnDone
 
     ldrb r0,[r5]
     mov r1,2
@@ -1084,7 +1091,7 @@ ChaosAttackForm:
     EngineCall PLAY_SOUND
     mov r0,4
     strb r0,[r5,0x09]
-@@done:
+ChaosAttackSpawnDone:
     pop {r4,r6,r7,pc}
     .pool
 
@@ -1106,14 +1113,17 @@ ChaosAttackFly:
     ldrh r0,[r5,0x20]
     sub r0,1
     strh r0,[r5,0x20]
-    bpl @@done
+    bpl ChaosAttackFlyDone
 
     mov r0,0x0F
     mov r1,1
     mov r3,0
-    // Use the appended eighth native pattern variant. Its new generic-effect
-    // ID resolves to ChaosImpactSprite without replacing BN6 effect 0x45.
-    mov r4,CHAOS_IMPACT_PATTERN_VARIANT
+ChaosSetImpactPattern:
+    // BN5 derives this selector from the attack object's variant: variant 1
+    // plus 5 selects native pattern 6 and generic effect 0x24. Forcing the
+    // adjacent group-0x14/index-0x14 archive creates the stray lightning bolt.
+    ldr r4,[r5,0x04]
+    add r4,5
     EngineCall CHAOS_IMPACT_EFFECT
 
     ldrb r0,[r5,0x06]
@@ -1149,7 +1159,7 @@ ChaosAttackFly:
     bl ChaosFlashSpawn
     mov r0,8
     str r0,[r5,0x08]
-@@done:
+ChaosAttackFlyDone:
     pop {r4,r6,r7,pc}
     .pool
 
@@ -1854,9 +1864,4 @@ ChaosTrigTable:
 .align 4
 ChaosTeardownSprite:
 .incbin "build/chaoslord-teardown-sprite.bin"
-.endautoregion
-.autoregion
-.align 4
-ChaosImpactSprite:
-.incbin "build/chaoslord-impact-sprite.bin"
 .endautoregion

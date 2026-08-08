@@ -201,8 +201,7 @@ def verify_version(
         ),
         (
             0x31CD8, "ImportedSpriteGroup14Table", 0x32114, 0x80,
-            (("CHAOS_IMPACT_SPRITE_INDEX", "ChaosImpactSprite", False),
-             ("DEATHPHOENIX_STRIKE_SPRITE_INDEX", "DeathPhoenixStrikeSprite", False)),
+            (("DEATHPHOENIX_STRIKE_SPRITE_INDEX", "DeathPhoenixStrikeSprite", False),),
         ),
     )
     for root_offset, table_name, original_offset, native_length, appended in sprite_tables:
@@ -253,66 +252,6 @@ def verify_version(
     verify(
         struct.pack("<I", chaos_ball_spawn_word) in chaos_code,
         f"{label} Ball Bass allocator word uses its appended sprite selector",
-    )
-    if label == "Falzar":
-        generic_effect_pointer = 0xE0634
-        generic_effect_offset = 0xE0398
-        chaos_selector_pointer = 0xE2FDC
-        chaos_selector_offset = 0xE2F48
-    else:
-        generic_effect_pointer = 0xE1970
-        generic_effect_offset = 0xE16D4
-        chaos_selector_pointer = 0xE431C
-        chaos_selector_offset = 0xE4288
-
-    generic_effect_table = rom_offset(symbol("ImportedGenericEffectTable"))
-    verify(
-        u32(output, generic_effect_pointer) == symbol("ImportedGenericEffectTable"),
-        f"{label} relocated generic-effect table pointer",
-    )
-    verify(
-        output[generic_effect_table:generic_effect_table + 0x1B0]
-        == original[generic_effect_offset:generic_effect_offset + 0x1B0],
-        f"{label} preserves native generic effects 0x00-0x6B",
-    )
-    chaos_effect_entry = rom_offset(symbol("ChaosImpactGenericEffectEntry"))
-    chaos_effect_id = symbol("CHAOS_IMPACT_EFFECT_ID")
-    verify(
-        chaos_effect_id == (chaos_effect_entry - generic_effect_table) // 4,
-        f"{label} ChaosLrd generic-effect ID derived from its table entry",
-    )
-    verify(
-        output[chaos_effect_entry:chaos_effect_entry + 4]
-        == bytes((0x14, symbol("CHAOS_IMPACT_SPRITE_INDEX"), 0x00, 0x00)),
-        f"{label} appends ChaosLrd private generic effect",
-    )
-    verify(
-        output[generic_effect_table + 0x45 * 4:generic_effect_table + 0x46 * 4]
-        == original[generic_effect_offset + 0x45 * 4:generic_effect_offset + 0x46 * 4]
-        == bytes((0x14, 0x14, 0x00, 0x00)),
-        f"{label} preserves native generic effect 0x45",
-    )
-
-    chaos_selector_table = rom_offset(symbol("ImportedChaosPatternSelectorTable"))
-    verify(
-        u32(output, chaos_selector_pointer) == symbol("ImportedChaosPatternSelectorTable"),
-        f"{label} relocated Chaos impact-selector table pointer",
-    )
-    verify(
-        output[chaos_selector_table:chaos_selector_table + 0x0E]
-        == original[chaos_selector_offset:chaos_selector_offset + 0x0E],
-        f"{label} preserves all seven native Chaos pattern variants",
-    )
-    chaos_selector_entry = rom_offset(symbol("ChaosImpactPatternSelectorEntry"))
-    chaos_pattern_variant = symbol("CHAOS_IMPACT_PATTERN_VARIANT")
-    verify(
-        chaos_pattern_variant == (chaos_selector_entry - chaos_selector_table) // 2,
-        f"{label} ChaosLrd pattern variant derived from its table entry",
-    )
-    verify(
-        output[chaos_selector_entry:chaos_selector_entry + 2]
-        == bytes((chaos_effect_id, 0x00)),
-        f"{label} appends ChaosLrd private impact pattern",
     )
     bugcharge_sprite = rom_offset(symbol("BugChargeGospelSprite"))
     verify(
@@ -480,7 +419,6 @@ def verify_version(
         ("ChaosAuraSprite", 0x2E3B20, 0x56E0, "ChaosLrd aura archive"),
         ("ChaosTrigTable", 0x5CD0, 0x280, "ChaosLrd trig table"),
         ("ChaosTeardownSprite", 0x389E68, 0x11F0, "ChaosLrd teardown archive"),
-        ("ChaosImpactSprite", 0x3906A8, 0x6B8, "ChaosLrd impact archive"),
     ]
     for target, source_offset, length, description in assets:
         start = rom_offset(symbol(target))
@@ -968,8 +906,16 @@ def verify_version(
             rom_offset(symbol("ChaosSetIntroTimer")):
             rom_offset(symbol("ChaosSetIntroTimer")) + 2
         ]
-        == b"\x71\x20",
-        f"{label} ChaosLrd reclaims BN6's shorter callback budget from its passive intro hold",
+        == b"\x8E\x20",
+        f"{label} ChaosLrd preserves Nebula Gray's native opening fade schedule",
+    )
+    verify(
+        output[
+            rom_offset(symbol("ChaosSetImpactPattern")):
+            rom_offset(symbol("ChaosSetImpactPattern")) + 4
+        ]
+        == b"\x6C\x68\x05\x34",
+        f"{label} ChaosLrd derives the native Ball Bass impact pattern from its object variant",
     )
     verify(jealousy_code and any(byte != 0xFF for byte in jealousy_code), f"{label} Jealousy code")
     verify(bugchain_code and any(byte != 0xFF for byte in bugchain_code), f"{label} BugChain code")
@@ -1181,8 +1127,6 @@ def verify_version(
         "ImportedSpriteGroup0CTable",
         "ImportedSpriteGroup10Table",
         "ImportedSpriteGroup14Table",
-        "ImportedGenericEffectTable",
-        "ImportedChaosPatternSelectorTable",
     ):
         allocated.append((symbol(table_name), symbol(f"{table_name}End"), table_name))
     for target, _, length, _ in laserman_assets:
@@ -1218,7 +1162,6 @@ def verify_version(
 
     allowed_ranges = [
         interval(0x31CCC, 0x10),
-        interval(generic_effect_pointer, 4), interval(chaos_selector_pointer, 4),
         interval(0x3DE8, 4),
         interval(ROLLARROW_RECORDS, 3 * 0x2C),
         interval(0x2CD64, 4), interval(0x3D5C, 4),

@@ -81,11 +81,10 @@ The following exact BN5 ROM slices are extracted at build time:
 All imported assets and runtime code are placed with Armips `.autoregion` in
 the expanded ROM rather than assigned fixed output offsets.
 
-ChaosLrd also imports BN5 group `0x14` entries `0x0D` and `0x14`. Entry
-`0x0D` includes its header at `0x389E68`; dropping that first word selects
-unrelated animation data and causes the visible `MegaBstr` teardown. Entry
-`0x14` supplies the native impact sprite/palette sequence. Both complete
-archives are appended to relocated BN6 tables.
+ChaosLrd also imports BN5 group `0x14` entry `0x0D`. It includes its header at
+`0x389E68`; dropping that first word selects unrelated animation data and
+causes the visible `MegaBstr` teardown. The complete archive is appended to
+the relocated BN6 table.
 
 The hit also loads packed value `0x00010401` and calls BN5's type-4 `0x0A`
 palette-object wrapper at `0x080E1158`. Its variant-1 state is the four-frame
@@ -107,10 +106,9 @@ pointer and appends these SearchMan mappings:
 
 Those numbers are outputs of the assembled layout, not duplicated constants.
 Each appended `.dw` has an entry label, and its public index is calculated as
-`(Entry - Table) / 4`. The same pattern derives ChaosLrd's appended generic
-effect ID and pattern variant from their table-entry labels. An archive label
-such as `BugChargeGospelSprite` is only a ROM address; it cannot identify a
-table slot until a pointer-table entry refers to it.
+`(Entry - Table) / 4`. An archive label such as `BugChargeGospelSprite` is
+only a ROM address; it cannot identify a table slot until a pointer-table
+entry refers to it.
 
 ChaosLrd deliberately appends the Bass archive twice. The main Bass actor and
 Ball Bass animate simultaneously, and BN6 keys its sprite cache by the packed
@@ -126,12 +124,13 @@ is therefore assembled as `0x10010008 | (CHAOS_BASS_BALL_SPRITE_INDEX << 8)`.
 Changing only the visible `r2` value leaves the old index in the object and
 loads BN6's native white-dot placeholder instead of the Ball Bass composite.
 
-The impact follows the same append-only rule at the metadata level. BN6's
-native generic-effect descriptor `0x45` remains byte-for-byte unchanged at
-group `0x14`/index `0x14`. A relocated descriptor table adds a private effect
-for the appended `ChaosImpactSprite`, and a relocated type-4 `0x24` selector
-table adds a private pattern variant that requests it. Native effect and
-pattern IDs therefore keep their original behavior.
+Ball Bass does not use group `0x14`/index `0x14` for its impact. BN5 derives
+the type-4 `0x24` pattern selector as attack-object variant `1 + 5`, yielding
+native pattern `6`; that pattern requests native generic effect `0x24`, whose
+descriptor is group `0x14`/index `0x00` with palette `1`. The port preserves
+that calculation, so neither the generic-effect table nor the pattern table
+needs relocation. Forcing index `0x14` instead selects the lightning archive
+and produces the stray bolt when Bass disappears.
 
 BN5 has base and SP library-art palettes, not an EX palette. The patch keeps
 the base foreground and uses yellow BGR555 values `0x03FF`, `0x0299`, and

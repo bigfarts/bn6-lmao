@@ -98,10 +98,6 @@ dd if="$BN5_ROM" of="$BUILD_DIR/chaoslord-aura-sprite.bin" bs=1 skip=$((0x2E3B20
 # skipping it makes BN6 interpret animation offsets as a sprite header and
 # produces the unrelated "MegaBstr" teardown.
 dd if="$BN5_ROM" of="$BUILD_DIR/chaoslord-teardown-sprite.bin" bs=1 skip=$((0x389E68)) count=$((0x11F0)) 2>/dev/null
-# Import ChaosLord's impact archive independently. sprites.inc appends it to
-# BN6's group-0x14 table and extends the generic-effect metadata with a new ID,
-# leaving native generic effect 0x45 and all of its existing users unchanged.
-dd if="$BN5_ROM" of="$BUILD_DIR/chaoslord-impact-sprite.bin" bs=1 skip=$((0x3906A8)) count=$((0x6B8)) 2>/dev/null
 dd if="$BN5_ROM" of="$BUILD_DIR/chaoslord-trig.bin" bs=1 skip=$((0x5CD0)) count=$((0x280)) 2>/dev/null
 
 # SignalRed replaces Navi+20 in both versions. Its targetable traffic-light
@@ -122,25 +118,17 @@ dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-palette.bin" bs=1 skip=$((0x7
 dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-battle-sprite.bin" bs=1 skip=$((0x380CA4)) count=$((0xF8C)) 2>/dev/null
 # Blue Moon SFX 0x015D's sample header plus its complete 0x4A1-byte PCM body.
 dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/bugchain-sound-sample.bin" bs=1 skip=$((0x1970A0)) count=$((0x4B1)) 2>/dev/null
-# Preserve every native sprite table that receives appended imported archives,
-# plus the native generic-effect tables extended for ChaosLord's private impact
-# selector. Gregar and Falzar place the effect metadata at different offsets.
+# Preserve every native sprite table that receives appended imported archives.
 for version in gregar falzar; do
     if [ "$version" = gregar ]; then
         sprite_rom=$BN6_GREGAR_ROM
-        generic_effect_offset=$((0xE16D4))
-        chaos_pattern_selector_offset=$((0xE4288))
     else
         sprite_rom=$BN6_FALZAR_ROM
-        generic_effect_offset=$((0xE0398))
-        chaos_pattern_selector_offset=$((0xE2F48))
     fi
     dd if="$sprite_rom" of="$BUILD_DIR/sprite-group08-table-$version.bin" bs=1 skip=$((0x31DA4)) count=$((0x5C)) 2>/dev/null
     dd if="$sprite_rom" of="$BUILD_DIR/sprite-group0C-table-$version.bin" bs=1 skip=$((0x31E00)) count=$((0x1A4)) 2>/dev/null
     dd if="$sprite_rom" of="$BUILD_DIR/sprite-group10-table-$version.bin" bs=1 skip=$((0x31FA4)) count=$((0x170)) 2>/dev/null
     dd if="$sprite_rom" of="$BUILD_DIR/sprite-group14-table-$version.bin" bs=1 skip=$((0x32114)) count=$((0x80)) 2>/dev/null
-    dd if="$sprite_rom" of="$BUILD_DIR/generic-effect-table-$version.bin" bs=1 skip=$generic_effect_offset count=$((0x1B0)) 2>/dev/null
-    dd if="$sprite_rom" of="$BUILD_DIR/chaos-pattern-selector-table-$version.bin" bs=1 skip=$chaos_pattern_selector_offset count=$((0x0E)) 2>/dev/null
 done
 
 # BugCharge replaces SignalRed in BugRSword's Gregar Giga slot, leaving BugFix
@@ -215,8 +203,6 @@ cp "$BUILD_DIR/sprite-group08-table-gregar.bin" "$BUILD_DIR/sprite-group08-table
 cp "$BUILD_DIR/sprite-group0C-table-gregar.bin" "$BUILD_DIR/sprite-group0C-table.bin"
 cp "$BUILD_DIR/sprite-group10-table-gregar.bin" "$BUILD_DIR/sprite-group10-table.bin"
 cp "$BUILD_DIR/sprite-group14-table-gregar.bin" "$BUILD_DIR/sprite-group14-table.bin"
-cp "$BUILD_DIR/generic-effect-table-gregar.bin" "$BUILD_DIR/generic-effect-table.bin"
-cp "$BUILD_DIR/chaos-pattern-selector-table-gregar.bin" "$BUILD_DIR/chaos-pattern-selector-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/gregar.sym" gregar.asm
 python3 "$PATCH_DIR/reorder_chip_sort.py" \
     "$BUILD_DIR/exe6_rom_e_lmao.srl" "$BUILD_DIR/gregar.sym" "$BN6_GREGAR_ROM"
@@ -229,8 +215,6 @@ cp "$BUILD_DIR/sprite-group08-table-falzar.bin" "$BUILD_DIR/sprite-group08-table
 cp "$BUILD_DIR/sprite-group0C-table-falzar.bin" "$BUILD_DIR/sprite-group0C-table.bin"
 cp "$BUILD_DIR/sprite-group10-table-falzar.bin" "$BUILD_DIR/sprite-group10-table.bin"
 cp "$BUILD_DIR/sprite-group14-table-falzar.bin" "$BUILD_DIR/sprite-group14-table.bin"
-cp "$BUILD_DIR/generic-effect-table-falzar.bin" "$BUILD_DIR/generic-effect-table.bin"
-cp "$BUILD_DIR/chaos-pattern-selector-table-falzar.bin" "$BUILD_DIR/chaos-pattern-selector-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/falzar.sym" falzar.asm
 python3 "$PATCH_DIR/reorder_chip_sort.py" \
     "$BUILD_DIR/exe6f_rom_f_e_lmao.srl" "$BUILD_DIR/falzar.sym" "$BN6_FALZAR_ROM"
