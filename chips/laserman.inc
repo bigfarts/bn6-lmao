@@ -519,10 +519,9 @@ LaserManLaserCommandTick:
     mov r0,0xFD
     cmp r2,r0
     beq @@spawn
-    // Resolve command effects through the same row contacts as damage. The
-    // spawned hit object translates the BN4 property word only after BN6
-    // reports a real collision, so commands cannot affect a target they miss.
-    bl LaserManSpawnRowEvent
+    // Advance through Blue Moon's command cadence, but defer every property
+    // change until the actual damage event reports contact. Spawning separate
+    // command collisions lets unrelated field contacts authorize effects.
     b @@done
 @@spawn:
     bl LaserManSpawnRowEvent
@@ -625,12 +624,14 @@ LaserManApplyCommandEffect:
 
 @@custom:
     mov r0,r6
-    mov r1,0x63                       // BN6 Custom bug severity
+    mov r1,0x63                       // BN6 turns-until-Custom-bug threshold
     EngineCall PLAYER_PROPERTY_FOR_SIDE
-    cmp r0,1
-    bge @@done                        // do not weaken an existing worse bug
+    cmp r0,0
+    bne @@done                        // preserve any existing Custom bug
     mov r1,0x63
-    mov r2,1                          // Custom bug 1: one fewer chip next turn
+    // Native BN6 encodes bug levels 1/2/3 as turn thresholds 4/3/2. Literal
+    // 1 is not level 1: it starts the reduction on turn 1 and ramps at once.
+    mov r2,4                          // Custom bug 1: starts on battle turn 4
 
 @@set:
     mov r0,r6
@@ -751,14 +752,16 @@ LaserManHitSpawn:
     strb r0,[r4,0x12]
     strb r1,[r4,0x13]
     strh r2,[r4,0x06]                 // command event word
+    ldrb r0,[r5,0x04]
+    str r0,[r4,0x74]                  // selected command for hit resolution
     ldrh r0,[r5,0x16]
     strh r0,[r4,0x16]
     mov r0,0xFD
     cmp r2,r0
     bne @@command_effect
-    // Normal damage uses SearchMan's proven region-25 collision init, then
-    // returns through LaserMan's quiet cleanup instead of spawning six miss
-    // sparkles across the row.
+    // Normal damage uses SearchMan's proven region-25 collision init. The
+    // selected command remains latched at +0x74 and is applied once only if
+    // this damage event contacts the opposing Navi.
     ldr r0,[r5,0x2C]
     str r0,[r4,0x2C]
     ldr r0,=LASERMAN_HIT_TAG
@@ -855,9 +858,6 @@ LaserManHitUpdate:
     push {r4,lr}
     EngineCall COLLISION_REMOVE
     EngineCall COLLISION_SPAWN_EFFECT
-    ldrh r0,[r5,0x06]
-    cmp r0,0xFD
-    beq @@cleanup
     ldr r4,[r5,0x54]
     ldr r0,[r4,0x70]
     cmp r0,0
@@ -879,15 +879,43 @@ LaserManHitUpdate:
     ldrb r2,[r0,0x13]
     cmp r1,r2
     bne @@cleanup
-    bl LaserManApplyCommandEffect
-    mov r4,r5
-    bl LaserManRefreshTargetPlayer
+    ldrh r0,[r5,0x06]
+    cmp r0,0xFD
+    bne @@cleanup
+    bl LaserManApplySelectedCommand
 @@cleanup:
     EngineCall COLLISION_CLEAR_REGION
     ldr r0,[r5,0x54]
     EngineCall COLLISION_FREE
     EngineCall OBJECT_FREE
     pop {r4,pc}
+    .pool
+
+// Apply the complete direction-specific command stream after the real damage
+// contact resolves. Property words are translated exactly once; the FD damage
+// and FF terminator are not command effects.
+LaserManApplySelectedCommand:
+    push {r4,r6,r7,lr}
+    ldr r0,[r5,0x74]
+    lsl r0,r0,2
+    ldr r1,=LaserManCommandStreams
+    ldr r7,[r1,r0]
+@@next:
+    ldrh r2,[r7]
+    add r7,2
+    mov r0,0xFF
+    cmp r2,r0
+    beq @@done
+    mov r0,0xFD
+    cmp r2,r0
+    beq @@done
+    strh r2,[r5,0x06]
+    bl LaserManApplyCommandEffect
+    mov r4,r5
+    bl LaserManRefreshTargetPlayer
+    b @@next
+@@done:
+    pop {r4,r6,r7,pc}
     .pool
 
 .align 4

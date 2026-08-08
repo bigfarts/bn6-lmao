@@ -58,8 +58,11 @@ adaptations are:
 - The miss visual's type-4 spawner replaces `r5` with the spawned effect. The
   port preserves the original shot-object `r5` across that call so cleanup
   always frees the shot rather than the effect.
-- The family wrapper's Cursor element in `r3` is copied into every spawned hit
-  object's `+0x0E` element byte, preserving SearchMan's trap-erasure behavior.
+- After using `r2` as the normal/final-shot selector, the actor copies its
+  translated one-hot Cursor value (`0x40`, originating from chip-table element
+  `6`) into every hit object's `+0x0E` byte. The runtime collision test confirms
+  that all five 20-damage base pulses still resolve with this value; writing
+  numeric table element `6` here is the invalid form.
 - Base, EX, and SP all select actor palette `0`, giving every summoned
   SearchMan the same in-battle colors while leaving menu-art palettes distinct.
 
@@ -181,6 +184,12 @@ of Jealousy's side comparison, chip-list lookup, panel predicate, overlay,
 gauge, and damage-object helpers. Gregar's damage-object wrapper is at
 `0x080C6C16`; Falzar's is at `0x080C53A6`, so that one call is selected in the
 version assembly rather than shared as a fixed address.
+
+Jealousy's pulse loop remains the normal BN6 full-field damage-object path; it
+does not inspect the opponent's hand or trap table. Every pulse resolves through
+ordinary collision and damage prevention. As in BN5, the later chip-deletion
+phase is separate from those hits and runs whenever the link battle is active,
+even if AntiDamage or another trap intercepted the complete pulse train.
 
 Jealousy's two time-freeze DMA records copy `0x100` bytes of BN5 overlay tiles
 from file offset `0x6FAD2C` to `0x06017940` and its `0x20`-byte palette from
@@ -312,11 +321,33 @@ Blue Moon also registers the light in its per-owner deployable list through
 `0x0800B230` and unregisters it through `0x0800B272`. Their structurally
 identical BN6 counterparts are `0x0800F614` and `0x0800F656`. Retaining that
 registration is what exposes the object to DustCross's B+Left suction path;
-collision targetability alone is not sufficient. BN6's collision presenter
-consumes the collision region argument, so the port explicitly reloads region
-`0x13` at initialization and presents it again on every active frame. This
-keeps the light's 100-HP hurtbox targetable and, together with the deployable
-registration, makes it available to either player's DustCross sweep.
+collision targetability alone is not sufficient. SignalRed registers in the
+one-object deployable slot for its owner, while DustCross scans all eight
+deployable pointers and marks a target with the suction bit belonging to the
+DustCross user. The port accepts both owner-specific bits, making the light
+available to either player's sweep.
+
+BN6 collision setup keeps a matched obstacle mask pair on SignalRed, just as
+Blue Moon does; clearing either complete word prevents incoming attacks from
+resolving against the light. BN4's numeric collision regions cannot be copied
+literally because BN6 assigns different semantics to those indexes. SignalRed
+therefore uses BN6's passive, destructible field-object pair `14/15`, the same
+pair as a settled RockCube, and resubmits region `14` every frame. The earlier
+`7/5` translation produced an active attack-class collision record carrying a
+Rush-reactive mask, so it incorrectly woke Rush as soon as the hurtbox became
+live. The port allocates the record at object initialization but defers
+setup/presentation until time stop ends, so the persistent hurtbox begins in
+normal battle time. Each active frame then clears prior hit presentation,
+collects the five element-specific
+collision damage slots, runs deployable lifetime maintenance, and applies the
+total through BN6's saturating object-HP subtractor at `0x0800E2D8`. The broader
+Navi damage state controller is not used because it requires a secondary status
+object this passive obstacle does not own. The controller destroys the light when
+its resulting HP reaches zero, and red/green state changes pause while time is
+stopped.
+Because deployable registration precedes object initialization, every init
+failure also uses the full unregister/free path instead of leaving a freed
+pointer in the DustCross list.
 
 DustCross's suction sweep at `0x080F10B4` walks all eight deployable-list
 entries. For each eligible object, `0x0800F8B0` raises the common removal bit
@@ -476,9 +507,11 @@ command IDs `1`-`4` in that priority order. The beam dispatch table at
 `5,6,7,FD`; Down `1,2,3,4,FF0C,FD`; Right `010A,FD`; and Left `FE,FD`.
 `FD` is the normal damage hit. `FE` dynamically packs the target's decremented
 Custom Screen count with property ID `0x12` and clamps the count at two. The
-port translates that result to BN6's Custom bug property `0x63` at severity
-1 instead of permanently lowering Custom Level property `0x0A`. Existing
-more-severe Custom bugs are not weakened. Properties are read through the
+port translates that result to BN6's Custom bug property `0x63` using its
+native level-1 turn threshold `4`, instead of permanently lowering Custom
+Level property `0x0A`. BN6 encodes levels 1/2/3 as thresholds 4/3/2; literal
+`1` is not level 1 and makes the reduction begin on turn 1. Existing Custom
+bugs are preserved. Properties are read through the
 per-side accessor at `0x080136CC` and written through the setter at
 `0x080136B0`. The remaining Blue Moon property IDs translate to BN6 as
 follows: `5,6,7` zero Attack, Rapid, and Charge (`1,2,3`); `1,2,3,4` clear
@@ -504,16 +537,15 @@ normal attack region 25 before using the native collision helpers. The final
 `FD` event uses SearchMan's exact working region-25 collision initialization
 but LaserMan's quiet cleanup, avoiding the
 six random miss-impact sparkles that SearchMan's own cleanup would create for
-the six panel hits. Command events use the same six panel-contact objects as
-damage and are translated into opposing NaviStats changes only when BN6's
-collision result at `+0x70` reports contact and that row object occupies the
-opposing Navi's current panel. A trap or obstacle elsewhere in the beam cannot
-authorize the effect, and missed beams have no command effect. The property
-words are not passed through BN6's incompatible extended-effect IDs. Thus no
-direction has no extra effect, while a held direction applies only its
-documented stat or Custom Window change after a hit. BN6's collision presenter also consumes the region in
-`r1`, so the hit reloads 25 after decoding `FD`/command effects rather than
-accidentally presenting the event word as the collision region. Appended
+the six panel hits. Only the final `FD` damage event creates six panel-contact
+objects. The chosen direction is latched outside the event halfword, and its
+entire property stream is translated exactly once only when BN6's collision
+result at `+0x70` reports contact and that row object occupies the opposing
+Navi's current panel. A trap or obstacle elsewhere in the beam cannot authorize
+the effect, and missed beams have no command effect. The property words are not
+passed through BN6's incompatible extended-effect IDs. Thus no direction has
+no extra effect, while a held direction applies only its documented stat or
+Custom Window change after a hit. Appended
 sprite group `0x0C`/index `0x6A` points at the imported compressed shared archive.
 BN6's compressed-sprite preloader takes separate group/index arguments instead
 of BN4's packed selector, and its reused object tails require the beam Z word

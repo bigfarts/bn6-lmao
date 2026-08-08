@@ -407,6 +407,9 @@ SearchManSpawnHit:
     mov r4,29
 @@normal:
     ldr r6,[r5,0x2C]
+    // r2 has finished serving as the final-shot selector. Replace it with the
+    // actor's translated one-hot Cursor value (0x40), never numeric element 6.
+    ldrb r2,[r5,0x0E]
     bl SearchManHitSpawn
     pop {r4,r6,pc}
 
@@ -789,9 +792,7 @@ SearchManHitSpawn:
     beq @@done
     strb r1,[r0,0x12]
     strb r2,[r0,0x13]
-    // The attack-family wrapper supplies the chip element in r3. BN5 copies
-    // it into the spawned hit object before collision setup; without this
-    // byte BN6 treats every shot as Null and Cursor hits cannot erase traps.
+    // The spawner restores the caller's r2 as r3 here.
     strb r3,[r0,0x0E]
     str r6,[r0,0x2C]
     ldrh r1,[r5,0x16]

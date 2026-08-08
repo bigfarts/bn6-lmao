@@ -50,8 +50,9 @@ def rom_offset(address: int) -> int:
     return address - 0x08000000
 
 
-def contains_thumb_bl(data: bytes, start: int, end: int, target: int) -> bool:
-    """Return whether an ARMv4T Thumb BL in the ROM interval reaches target."""
+def count_thumb_bl(data: bytes, start: int, end: int, target: int) -> int:
+    """Count ARMv4T Thumb BL instructions in the ROM interval reaching target."""
+    count = 0
     for offset in range(start, end - 3, 2):
         high, low = struct.unpack_from("<HH", data, offset)
         if high & 0xF800 != 0xF000 or low & 0xF800 != 0xF800:
@@ -60,8 +61,13 @@ def contains_thumb_bl(data: bytes, start: int, end: int, target: int) -> bool:
         if displacement & 0x400000:
             displacement -= 0x800000
         if 0x08000000 + offset + 4 + displacement == target:
-            return True
-    return False
+            count += 1
+    return count
+
+
+def contains_thumb_bl(data: bytes, start: int, end: int, target: int) -> bool:
+    """Return whether an ARMv4T Thumb BL in the ROM interval reaches target."""
+    return count_thumb_bl(data, start, end, target) != 0
 
 
 def archive_entries(data: bytes, offset: int) -> list[bytes]:
@@ -868,12 +874,17 @@ def verify_version(
         b"\x01\xB4\x30\x1C\x00\x0C\x94\x28\x01\xBC" in search_code,
         f"{label} RollArrow packed-attack discriminator",
     )
+    search_spawn_hit = output[
+        rom_offset(symbol("SearchManSpawnHit")):rom_offset(symbol("SearchManPulseScale"))
+    ]
     search_hit_spawn = output[
         rom_offset(symbol("SearchManHitSpawn")):rom_offset(symbol("SearchManHitMain"))
     ]
     verify(
-        b"\x83\x73" in search_hit_spawn,
-        f"{label} SearchMan copies Cursor element into each shot object",
+        b"\xAA\x7B" in search_spawn_hit
+        and b"\x83\x73" in search_hit_spawn
+        and b"\x06\x23\x83\x73" not in search_hit_spawn,
+        f"{label} SearchMan propagates translated Cursor element 0x40 into every shot object",
     )
     verify(chaos_code and any(byte != 0xFF for byte in chaos_code), f"{label} ChaosLrd code")
     verify(
@@ -931,6 +942,20 @@ def verify_version(
         f"{label} ChaosLrd derives the native Ball Bass impact pattern from its object variant",
     )
     verify(jealousy_code and any(byte != 0xFF for byte in jealousy_code), f"{label} Jealousy code")
+    jealousy_finish = output[
+        rom_offset(symbol("JealousyFinishDelete")):rom_offset(symbol("JealousyRefreshDeleteOverlay"))
+    ]
+    jealousy_pulses_start = rom_offset(symbol("JealousyPulsePhase"))
+    jealousy_pulses_end = rom_offset(symbol("JealousyDeletePhase"))
+    verify(
+        struct.pack("<I", 0x0802CE61) not in jealousy_code
+        and struct.pack("<I", 0x080103BD) not in jealousy_code
+        and struct.pack("<I", 0x0802E04F) in jealousy_finish
+        and contains_thumb_bl(
+            output, jealousy_pulses_start, jealousy_pulses_end, symbol("JealousyAttackField")
+        ),
+        f"{label} Jealousy preserves every pulse and BN5's trap-independent final deletion",
+    )
     verify(bugchain_code and any(byte != 0xFF for byte in bugchain_code), f"{label} BugChain code")
     verify(struct.pack("<I", symbol("BUGCHAIN_TAG")) in bugchain_code, f"{label} BugChain controller tag")
     verify(struct.pack("<I", symbol("BUGCHAIN_VISUAL_TAG")) in bugchain_code, f"{label} BugChain visual tag")
@@ -1034,10 +1059,11 @@ def verify_version(
         verify(struct.pack("<I", target) in jealousy_code, f"{label} Jealousy runtime target 0x{target:08X}")
     for target in (
         0x0800B917, 0x0800B94D, 0x0800B9B1, 0x0800BC89, 0x0800BD35,
-        0x08001383, 0x0800138F, 0x0800F615, 0x0800F657, 0x0800F8CF, 0x0800F90F,
+        0x08001383, 0x0800138F, 0x0800A099, 0x0800E2D9,
+        0x0800F615, 0x0800F657, 0x0800F673, 0x0800F8CF, 0x0800F90F,
         0x08002E3D, 0x08002F5D,
         0x08019893, 0x080198CF, 0x08019FB5,
-        0x0801A019, 0x0801A181,
+        0x0801A019, 0x0801A181, 0x0801AD13,
     ):
         verify(struct.pack("<I", target) in signalred_code, f"{label} SignalRed runtime target 0x{target:08X}")
     verify(
@@ -1045,8 +1071,22 @@ def verify_version(
         f"{label} SignalRed does not clobber its hurtbox region through panel update",
     )
     verify(
-        signalred_code.count(struct.pack("<I", 0x0801A019)) >= 2,
-        f"{label} SignalRed submits its hurtbox at init and every active frame",
+        signalred_code.count(b"\x0E\x21") >= 2,
+        f"{label} SignalRed submits its hurtbox after deferred setup and every active frame",
+    )
+    verify(
+        b"\x0E\x21\x0F\x22\x03\x23" in signalred_code
+        and b"\x81\x20\xE8\x71" in signalred_code,
+        f"{label} SignalRed defers BN6's passive obstacle collision pair until after time stop",
+    )
+    verify(
+        contains_thumb_bl(
+            output,
+            rom_offset(symbol("SignalRedObjectInit")),
+            rom_offset(symbol("SignalRedObjectUpdate")),
+            symbol("SignalRedObjectDestroy"),
+        ),
+        f"{label} SignalRed unregisters even when object initialization fails",
     )
     for target in (
         0x0800CC73, 0x0800E277, 0x0800E2AD,
@@ -1123,10 +1163,10 @@ def verify_version(
     command_tick_start = rom_offset(symbol("LaserManLaserCommandTick"))
     command_tick_end = rom_offset(symbol("LaserManApplyCommandEffect"))
     verify(
-        contains_thumb_bl(
+        count_thumb_bl(
             output, command_tick_start, command_tick_end, symbol("LaserManSpawnRowEvent")
-        ),
-        f"{label} LaserMan command events spawn row contacts",
+        ) == 1,
+        f"{label} LaserMan spawns only the single FD damage row event",
     )
     verify(
         not contains_thumb_bl(
@@ -1135,25 +1175,36 @@ def verify_version(
         f"{label} LaserMan command scheduler does not apply effects before contact",
     )
     hit_update_start = rom_offset(symbol("LaserManHitUpdate"))
+    apply_selected_start = rom_offset(symbol("LaserManApplySelectedCommand"))
     hit_update_end = rom_offset(symbol("LaserManCommandStreams"))
     hit_update = output[hit_update_start:hit_update_end]
     verify(
         b"\x20\x6F\x00\x28" in hit_update
         and struct.pack("<I", 0x080103BD) in hit_update
         and contains_thumb_bl(
-            output, hit_update_start, hit_update_end, symbol("LaserManApplyCommandEffect")
+            output, hit_update_start, apply_selected_start, symbol("LaserManApplySelectedCommand")
         )
         and contains_thumb_bl(
-            output, hit_update_start, hit_update_end, symbol("LaserManRefreshTargetPlayer")
+            output, apply_selected_start, hit_update_end, symbol("LaserManApplyCommandEffect")
+        )
+        and contains_thumb_bl(
+            output, apply_selected_start, hit_update_end, symbol("LaserManRefreshTargetPlayer")
         ),
         f"{label} LaserMan applies command effects only after target-panel contact",
+    )
+    verify(
+        b"\x60\x67" in hit_spawn
+        and output[apply_selected_start:hit_update_end].startswith(b"\xD0\xB5\x68\x6F"),
+        f"{label} LaserMan stores the selected command outside the FD event halfword",
     )
     command_effect = output[
         rom_offset(symbol("LaserManApplyCommandEffect")):rom_offset(symbol("LaserManRefreshTargetPlayer"))
     ]
     verify(
-        command_effect.count(b"\x63\x21") >= 2 and b"\x0A\x21" not in command_effect,
-        f"{label} LaserMan Left applies Custom bug 1 instead of lowering Custom Level",
+        command_effect.count(b"\x63\x21") >= 2
+        and b"\x63\x21\x04\x22" in command_effect
+        and b"\x0A\x21" not in command_effect,
+        f"{label} LaserMan Left applies native Custom bug 1 threshold instead of an invalid severity",
     )
     target_refresh = output[
         rom_offset(symbol("LaserManRefreshTargetPlayer")):rom_offset(symbol("LaserManSpawnRowEvent"))

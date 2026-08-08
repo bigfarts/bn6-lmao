@@ -242,6 +242,9 @@ SignalRedSpawnPersistent:
     orr r1,r2
     strb r1,[r0]
     ldrb r1,[r4,0x16]
+    // Register in BN6's one-object-per-side deployable slot. DustCross scans
+    // every slot regardless of owner, and the update path below accepts both
+    // owner-specific suction bits, so either player can vacuum the light.
     mov r2,1
     EngineCall OBJECT_REGISTER_DEPLOYABLE
     pop {r4,r6,r7,pc}
@@ -291,9 +294,10 @@ SignalRedObjectInit:
     orr r0,r1
     strb r0,[r5]
 
-    // Blue Moon's object is a normal target with 100 HP. These object fields
-    // and collision setup arguments are unchanged in BN6; only the collision
-    // record size/API addresses moved.
+    // Blue Moon's object is a normal target with 100 HP. Use BN6's native
+    // passive, destructible field-object pair (14/15, the settled RockCube
+    // pair) so incoming attacks resolve without advertising a Rush-reactive
+    // attack class.
     mov r0,100
     strh r0,[r5,0x24]
     strh r0,[r5,0x26]
@@ -305,41 +309,88 @@ SignalRedObjectInit:
     mov r7,r0
     cmp r0,0
     beq @@free
-    mov r1,0x13
-    mov r2,0x14
-    mov r3,3
-    EngineCall COLLISION_SETUP
-    // BN6's collision presenter consumes r1. Keep the native target region
-    // live explicitly; the extra panel-update call formerly clobbered it.
-    mov r1,0x13
-    EngineCall COLLISION_PRESENT
 
     // Blue Moon registers deployables before init, starts on animation 0
     // (red), waits three updates in the existing +0x22 timer, then plays its
-    // placement cue and starts the first full red interval. Keep +0x0B clear:
-    // BN6's shared wind-removal handler owns that byte.
+    // placement cue and starts the first full red interval. Bit 7 of +0x07
+    // defers collision setup until the dimming cut-in has ended, so the
+    // persistent hurtbox begins in normal battle time. Keep +0x0B clear
+    // because BN6's shared wind-removal handler owns that byte.
     mov r0,0
-    strb r0,[r5,0x0A]
+    strb r0,[r5,0x06]
     strb r0,[r5,0x0B]
-    mov r0,1
-    str r0,[r5,0x68]
+    mov r0,0x81
+    strb r0,[r5,0x07]
     mov r0,4
     str r0,[r5,0x08]
     EngineCall OBJECT_UPDATE
     pop {r4,r6,r7,pc}
 @@free:
-    EngineCall OBJECT_FREE
+    // Registration happens before the first object update. Even an invalid
+    // panel or collision-allocation failure must remove that list entry;
+    // leaving a freed pointer for DustCross is an intermittent hard lock.
+    bl SignalRedObjectDestroy
     pop {r4,r6,r7,pc}
     .pool
 
 SignalRedObjectUpdate:
     push {lr}
+    // COLLISION_SETUP registers immediately. Do not expose the persistent
+    // field-object hurtbox until the time-stop controller has finished.
+    ldrb r0,[r5,0x07]
+    mov r1,0x80
+    tst r0,r1
+    beq @@collision_ready
+    EngineCall BATTLE_IS_TIME_STOPPED
+    cmp r0,0
+    beq @@setup_collision
+    EngineCall OBJECT_UPDATE
+    pop {pc}
+@@setup_collision:
+    ldr r0,[r5,0x54]
+    mov r1,14
+    mov r2,15
+    mov r3,3
+    EngineCall COLLISION_SETUP
+    mov r1,14
+    EngineCall COLLISION_PRESENT
+    ldrb r0,[r5,0x07]
+    mov r1,0x80
+    bic r0,r1
+    strb r0,[r5,0x07]
+@@collision_ready:
+    // Collect the five element-specific collision damage slots into +0x80,
+    // run deployable lifetime maintenance, and apply that total with BN6's
+    // saturating object-HP subtractor. FIELD_COLLISION_UPDATE begins by
+    // clearing the prior hit presentation itself; the broader Navi damage
+    // state machine is not used because it requires a separate status object.
+    EngineCall FIELD_COLLISION_UPDATE
+    EngineCall DEPLOYABLE_LIFETIME_UPDATE
+    ldr r1,[r5,0x54]
+    mov r0,0x80
+    ldrh r0,[r1,r0]
+    cmp r0,0
+    beq @@damage_applied
+    EngineCall OBJECT_APPLY_DAMAGE
+@@damage_applied:
     EngineCall BATTLE_IS_OVER
     cmp r0,0
-    bne SignalRedObjectBeginDestroy
+    beq @@battle_active
+    b SignalRedObjectBeginDestroy
+@@battle_active:
     ldrh r0,[r5,0x24]
     cmp r0,0
-    beq SignalRedObjectBeginDestroy
+    bne @@has_hp
+    b SignalRedObjectBeginDestroy
+@@has_hp:
+    // Native field objects do not advance state while a dimming chip owns the
+    // time-freeze lifecycle. In particular, never flip the opponent's chip
+    // enable bit halfway through a cut-in.
+    EngineCall BATTLE_IS_TIME_STOPPED
+    cmp r0,0
+    beq @@check_removal
+    b SignalRedObjectAnimate
+@@check_removal:
     EngineCall COLLISION_GET_FLAGS
     // DustCross first raises the generic removal bit (0x8000), then one of
     // the owner-specific suction bits (0x100000/0x200000). Native BN6
@@ -347,15 +398,21 @@ SignalRedObjectUpdate:
     // before removing the field object; kind 15 uses the extended table above.
     ldr r1,=0x00300000
     tst r0,r1
-    bne SignalRedObjectStoreDustAmmo
+    beq @@not_dust
+    b SignalRedObjectStoreDustAmmo
+@@not_dust:
     // 0x40000 is BN6's separate, timed wind-removal path.
     mov r1,4
     lsl r1,r1,16
     tst r0,r1
-    beq SignalRedObjectNormalUpdate
+    bne @@wind_remove
+    b SignalRedObjectNormalUpdate
+@@wind_remove:
     EngineCall OBJECT_UPDATE_SUCTION
     cmp r0,1
-    beq SignalRedObjectBeginDestroy
+    bne @@still_present
+    b SignalRedObjectBeginDestroy
+@@still_present:
     // The shared handler owns visibility and its 20-frame timer during this
     // separate wind-removal path. Do not advance the light cycle.
     pop {pc}
@@ -367,7 +424,7 @@ SignalRedObjectStoreDustAmmo:
     bl SignalRedObjectDestroy
     pop {pc}
 SignalRedObjectNormalUpdate:
-    ldr r0,[r5,0x68]
+    ldrb r0,[r5,0x07]
     cmp r0,0
     beq SignalRedObjectCycleUpdate
     ldrh r0,[r5,0x22]
@@ -375,7 +432,7 @@ SignalRedObjectNormalUpdate:
     strh r0,[r5,0x22]
     bne SignalRedObjectAnimate
     mov r0,0
-    str r0,[r5,0x68]
+    strb r0,[r5,0x07]
 SignalRedPlaySpawnSound:
     mov r0,SIGNALRED_SFX_SPAWN >> 1
     lsl r0,r0,1
@@ -390,13 +447,13 @@ SignalRedObjectCycleUpdate:
     sub r0,1
     strh r0,[r5,0x22]
     bpl SignalRedObjectAnimate
-    ldrb r0,[r5,0x0A]
+    ldrb r0,[r5,0x06]
     cmp r0,0
     beq SignalRedObjectTurnGreen
 
     // Green -> red: close chip use for another 420 frames.
     mov r0,0
-    strb r0,[r5,0x0A]
+    strb r0,[r5,0x06]
     strb r0,[r5,0x10]
     EngineCall SPRITE_SET_ANIMATION
     EngineCall SPRITE_LOAD_ANIM_DATA
@@ -408,7 +465,7 @@ SignalRedObjectCycleUpdate:
 SignalRedObjectTurnGreen:
     // Red -> green: restore chip use for Blue Moon's 50-frame window.
     mov r0,4
-    strb r0,[r5,0x0A]
+    strb r0,[r5,0x06]
     mov r0,1
     strb r0,[r5,0x10]
     EngineCall SPRITE_SET_ANIMATION
@@ -420,12 +477,12 @@ SignalRedPlayGreenSound:
     mov r0,SIGNALRED_SFX_GREEN
     EngineCall PLAY_SOUND
 SignalRedObjectAnimate:
-    // Persistent hurtboxes must be submitted on every active frame. Blue
-    // Moon does this at the end of every traffic-light update as well.
-    mov r1,0x13
+    // Persistent hurtboxes must be submitted on every active frame.
+    mov r1,14
     EngineCall COLLISION_PRESENT
     EngineCall OBJECT_UPDATE
     pop {pc}
+
 SignalRedObjectBeginDestroy:
     mov r0,8
     str r0,[r5,0x08]

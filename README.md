@@ -37,7 +37,8 @@ effect on Base, EX, and SP:
 - Up resets Attack, Rapid, and Charge to level 1.
 - Down disables SuperArmor, AirShoes, FloatShoes, Undershirt, and B+Left abilities.
 - Right restores the standard charge shot without overwriting an active Cross charge shot.
-- Left applies Custom bug 1, reducing the target's next Custom Screen selection by one chip.
+- Left applies native BN6 Custom bug 1. Its first reduction begins on battle
+  turn 4 and then worsens by one slot per turn, matching BN6's normal bug.
 
 Command effects require the beam to contact the target. A missed LaserMan does
 not alter stats, abilities, charge shots, or Custom behavior.
@@ -59,8 +60,10 @@ uses ChaosLrd menu art; Falzar intentionally retains its original slot art.
 Replaces LifeSync with the complete BN5 Jealousy attack. It is a 60 MB,
 Null-element StandardChip in code J with 80 displayed power. For each chip
 loaded by the opponent, Jealousy produces one 80-damage full-field pulse, then
-runs BN5's chip-delete overlay and cleanup sequence. Its icon, library art, palette, and
-delete-overlay graphics are imported from BN5 in both versions.
+runs BN5's chip-delete overlay and cleanup sequence. Every pulse fires through
+normal collision handling, while the separate deletion phase still runs through
+traps exactly as it does in BN5. Its icon, library art, palette, and delete-overlay graphics are imported
+from BN5 in both versions.
 
 ### BugChain
 
@@ -96,7 +99,9 @@ art and battle sprite. Its placement cue imports Blue Moon's original sample
 and sequence; the green-light cue uses its matching BN6 sound,
 and the light is registered as a normal deployable so DustCross can suck it in
 with B+Left. Its 100-HP hurtbox remains active every frame, and either player's
-DustCross can suck it in.
+DustCross can suck it in. Its native RockCube-class passive collision is enabled
+after the cut-in ends, so it cannot trigger Rush, Beat, or traps; dimming
+cut-ins also pause its red/green state transition without stalling either peer.
 
 ### DethPhnx
 
