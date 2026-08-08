@@ -1,5 +1,10 @@
 # bn6 lmao
 
+## AntiNavi
+
+AntiNavi's MB cost is reduced from 50 MB to 33 MB in both versions. Its native
+behavior and all other chip metadata are unchanged.
+
 ## RollArrow
 
 Replaces TrainArrow1/2/3 with Blue Moon RollArrow1/2/3 in both versions.
@@ -31,8 +36,8 @@ Hold a direction while LaserMan raises his arms to add the original command
 effect. This works for Base, EX, and SP: Up resets Attack/Rapid/Charge to level
 1; Down disables SuperArmor, AirShoes, FloatShoes, Undershirt, and B+Left
 abilities; Right restores the standard charge shot without overwriting an
-active Cross charge shot; Left applies native BN6 Custom bug 1 (turn threshold
-4), without producing invalid blank chips. Command effects require
+active Cross charge shot; Left permanently reduces the target's Custom Screen
+selection by one chip, to a minimum of two. Command effects require
 the beam to hit the target, so a miss does not alter the target.
 
 Base uses the native red-background menu palette. EX keeps the base LaserMan

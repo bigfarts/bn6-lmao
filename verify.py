@@ -20,6 +20,7 @@ from reorder_chip_sort import (
 
 
 ROLLARROW_RECORDS = CHIP_DATA_OFFSET + 0x018 * 0x2C
+ANTINAVI_RECORD = CHIP_DATA_OFFSET + 0x0BA * 0x2C
 LASERMAN_RECORDS = CHIP_DATA_OFFSET + 0x0E3 * 0x2C
 SEARCHMAN_RECORDS = CHIP_DATA_OFFSET + 0x107 * 0x2C
 BUGCHAIN_RECORD = CHIP_DATA_OFFSET + 0x0BE * 0x2C
@@ -364,6 +365,20 @@ def verify_version(
         verify(u32(record, 0x20) == symbol(roll_icons[index]), f"{label} RollArrow {index + 1} icon")
         verify(u32(record, 0x24) == symbol("RollArrowImage"), f"{label} RollArrow {index + 1} image")
         verify(u32(record, 0x28) == symbol(roll_palettes[index]), f"{label} RollArrow {index + 1} palette")
+
+    antinavi_record = output[ANTINAVI_RECORD:ANTINAVI_RECORD + CHIP_RECORD_SIZE]
+    original_antinavi_record = original[ANTINAVI_RECORD:ANTINAVI_RECORD + CHIP_RECORD_SIZE]
+    verify(antinavi_record[8] == 33, f"{label} AntiNavi 33 MB cost")
+    verify(
+        antinavi_record[:8] == original_antinavi_record[:8]
+        and antinavi_record[9:CHIP_SORT_OFFSET] == original_antinavi_record[9:CHIP_SORT_OFFSET]
+        and antinavi_record[CHIP_SORT_OFFSET + 2:] == original_antinavi_record[CHIP_SORT_OFFSET + 2:],
+        f"{label} AntiNavi record unchanged outside MB cost",
+    )
+    verify(
+        u16(antinavi_record, CHIP_SORT_OFFSET) == expected_sorts[0x0BA],
+        f"{label} AntiNavi alphabetical sort",
+    )
 
     laserman_params = (0, 3, 4)
     laserman_rarities = (2, 3, 4)
@@ -1202,10 +1217,9 @@ def verify_version(
         rom_offset(symbol("LaserManApplyCommandEffect")):rom_offset(symbol("LaserManRefreshTargetPlayer"))
     ]
     verify(
-        command_effect.count(b"\x63\x21") >= 2
-        and b"\x63\x21\x04\x22" in command_effect
-        and b"\x0A\x21" not in command_effect,
-        f"{label} LaserMan Left applies native Custom bug 1 threshold instead of an invalid severity",
+        command_effect.count(b"\x0A\x21") >= 2
+        and b"\x63\x21" not in command_effect,
+        f"{label} LaserMan Left applies direct Cust -1 instead of the Custom bug property",
     )
     target_refresh = output[
         rom_offset(symbol("LaserManRefreshTargetPlayer")):rom_offset(symbol("LaserManSpawnRowEvent"))
@@ -1302,6 +1316,7 @@ def verify_version(
         interval(0x31CCC, 0x10),
         interval(0x3DE8, 4),
         interval(ROLLARROW_RECORDS, 3 * 0x2C),
+        interval(ANTINAVI_RECORD + 8, 1),
         interval(0x2CD64, 4), interval(0x3D5C, 4),
         interval(LASERMAN_RECORDS, 3 * 0x2C),
         interval(0x2CD94, 4), interval(0x3D60, 4), interval(0x3F74, 4), interval(0x4324, 4),

@@ -509,11 +509,9 @@ command IDs `1`-`4` in that priority order. The beam dispatch table at
 `5,6,7,FD`; Down `1,2,3,4,FF0C,FD`; Right `010A,FD`; and Left `FE,FD`.
 `FD` is the normal damage hit. `FE` dynamically packs the target's decremented
 Custom Screen count with property ID `0x12` and clamps the count at two. The
-port translates that result to BN6's Custom bug property `0x63` using its
-native level-1 turn threshold `4`, instead of permanently lowering Custom
-Level property `0x0A`. BN6 encodes levels 1/2/3 as thresholds 4/3/2; literal
-`1` is not level 1 and makes the reduction begin on turn 1. Existing Custom
-bugs are preserved. Properties are read through the
+port applies that direct Cust -1 behavior through BN6's Custom Level property
+`0x0A`; it does not translate the command into the separate Custom bug property
+`0x63`. Properties are read through the
 per-side accessor at `0x080136CC` and written through the setter at
 `0x080136B0`. The remaining Blue Moon property IDs translate to BN6 as
 follows: `5,6,7` zero Attack, Rapid, and Charge (`1,2,3`); `1,2,3,4` clear

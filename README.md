@@ -2,6 +2,11 @@
 
 ## Changes
 
+### AntiNavi
+
+AntiNavi retains its native BN6 behavior, codes, and metadata, but its MB cost
+is reduced from 50 MB to 33 MB in both versions.
+
 ### RollArrow
 
 Replaces TrainArrow1, TrainArrow2, and TrainArrow3 with Blue Moon's RollArrow
@@ -37,8 +42,8 @@ effect on Base, EX, and SP:
 - Up resets Attack, Rapid, and Charge to level 1.
 - Down disables SuperArmor, AirShoes, FloatShoes, Undershirt, and B+Left abilities.
 - Right restores the standard charge shot without overwriting an active Cross charge shot.
-- Left applies native BN6 Custom bug 1. Its first reduction begins on battle
-  turn 4 and then worsens by one slot per turn, matching BN6's normal bug.
+- Left permanently reduces the target's Custom Screen selection by one chip,
+  to a minimum of two chips.
 
 Command effects require the beam to contact the target. A missed LaserMan does
 not alter stats, abilities, charge shots, or Custom behavior.

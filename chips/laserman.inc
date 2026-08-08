@@ -624,14 +624,14 @@ LaserManApplyCommandEffect:
 
 @@custom:
     mov r0,r6
-    mov r1,0x63                       // BN6 turns-until-Custom-bug threshold
+    mov r1,0x0A                       // current Custom Screen chip count
     EngineCall PLAYER_PROPERTY_FOR_SIDE
-    cmp r0,0
-    bne @@done                        // preserve any existing Custom bug
-    mov r1,0x63
-    // Native BN6 encodes bug levels 1/2/3 as turn thresholds 4/3/2. Literal
-    // 1 is not level 1: it starts the reduction on turn 1 and ramps at once.
-    mov r2,4                          // Custom bug 1: starts on battle turn 4
+    mov r2,r0
+    cmp r2,2
+    ble @@custom_ready                // Blue Moon clamps Cust at two chips
+    sub r2,1
+@@custom_ready:
+    mov r1,0x0A
 
 @@set:
     mov r0,r6
