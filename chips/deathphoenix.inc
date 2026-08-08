@@ -27,9 +27,6 @@
 .endif
 
 .definelabel DEATHPHOENIX_TIMEFREEZE_ENTRY,   0x0802CDA0
-.definelabel TYPE1_DEATHPHOENIX_ENTRY,        0x08003CA0 // CrossDiv type-1 slot 1
-.definelabel TYPE4_DEATH_STRIKE_ENTRY,        0x080044CC // released type-4 slot 0x81
-.definelabel TYPE4_DEATH_FLAME_ENTRY,         0x080044D0 // released type-4 slot 0x82
 .definelabel DEATH_SINE_TABLE,                0x080065E0
 
 .definelabel DEATH_SPRITE_SPECIAL,            0x08003006
@@ -41,12 +38,6 @@
 
 .org DEATHPHOENIX_TIMEFREEZE_ENTRY
 .dw DeathPhoenixTimeFreezeSpawn + 1
-.org TYPE1_DEATHPHOENIX_ENTRY
-.dw DeathPhoenixMain + 1
-.org TYPE4_DEATH_STRIKE_ENTRY
-.dw DeathStrikeMain + 1
-.org TYPE4_DEATH_FLAME_ENTRY
-.dw DeathFlameMain + 1
 
 .autoregion
 .align 4
@@ -55,7 +46,7 @@ DeathPhoenixCodeStart:
 DeathPhoenixTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,1
+    mov r0,CUSTOM_TYPE1_ID
     EngineCall SPAWN_TYPE1
     mov r0,r5
     pop {r1-r3,r5}
@@ -69,6 +60,8 @@ DeathPhoenixTimeFreezeSpawn:
     strh r1,[r0,0x16]
     str r6,[r0,0x2C]
     str r7,[r0,0x54]
+    mov r1,TYPE1_KIND_DEATHPHOENIX
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     mov r1,1
     strb r1,[r7]
 @@done:
@@ -586,7 +579,7 @@ DeathSpawnStrikeForPanel:
 DeathStrikeSpawn:
     push {lr}
     push {r0,r1,r5}
-    mov r0,0x81
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1,r2,r5}
@@ -598,6 +591,8 @@ DeathStrikeSpawn:
     ldrh r1,[r5,0x16]
     strh r1,[r0,0x16]
     str r5,[r0,0x4C]
+    mov r1,TYPE4_KIND_DEATH_STRIKE
+    str r1,[r0,CUSTOM_OBJECT_KIND]
 @@done:
     pop {pc}
 
@@ -904,13 +899,13 @@ DeathStrikeAttack:
     pop {r4,r6,r7,pc}
     .pool
 
-// BN5 type-4 0x71, translated directly into released BN6 type-4 slot 0x82.
-// It shares the imported group-0x10/index-0x49 archive with type-4 0x89;
-// that archive is appended to BN6 group 0x14.
+// BN5 type-4 0x71, translated into the project Type-4 hub. It shares the
+// imported group-0x10/index-0x49 archive with type-4 0x89; that archive is
+// appended to BN6 group 0x14.
 DeathFlameSpawn:
     push {lr}
     push {r0,r1,r5}
-    mov r0,0x82
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1,r2,r5}
@@ -920,6 +915,8 @@ DeathFlameSpawn:
     strb r2,[r0,0x13]
     ldrh r1,[r5,0x16]
     strh r1,[r0,0x16]
+    mov r1,TYPE4_KIND_DEATH_FLAME
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     ldrb r1,[r0]
     mov r2,0x10
     bic r1,r2

@@ -39,24 +39,12 @@
 
 .definelabel TIMEFREEZE_DISPATCH_E,  0x0802CD94
 
-.definelabel TYPE1_SEARCHMAN_ENTRY,  0x08003D60 // free type-1 slot 0x31
-.definelabel TYPE3_SEARCH_HIT_ENTRY, 0x08003F74 // free type-3 slot 0x2c
-.definelabel TYPE4_RETICLE_ENTRY,    0x08004324 // free type-4 slot 0x17
-
 // ---------------------------------------------------------------------------
-// Hook the three cooperating native object classes.
+// Hook the attack-family launcher. The cooperating runtime objects all use
+// the project-wide class hubs in object_types.inc.
 
 .org TIMEFREEZE_DISPATCH_E
 .dw SearchManTimeFreezeSpawn + 1
-
-.org TYPE1_SEARCHMAN_ENTRY
-.dw SearchManObjectMain + 1
-
-.org TYPE3_SEARCH_HIT_ENTRY
-.dw SearchManHitMain + 1
-
-.org TYPE4_RETICLE_ENTRY
-.dw SearchManReticleMain + 1
 
 // ---------------------------------------------------------------------------
 // Runtime code. This is a direct state-for-state port of BN5's type-1 0x31
@@ -83,7 +71,7 @@ SearchManTimeFreezeSpawn:
 @@searchman:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x31
+    mov r0,CUSTOM_TYPE1_ID
     EngineCall SPAWN_TYPE1
     mov r0,r5
     pop {r1-r3,r5}
@@ -96,6 +84,8 @@ SearchManTimeFreezeSpawn:
     str r5,[r0,0x4C]
     str r6,[r0,0x2C]
     str r7,[r0,0x64]
+    mov r1,TYPE1_KIND_SEARCH_ACTOR
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     mov r1,1
     strb r1,[r7]
 @@done:
@@ -429,7 +419,7 @@ SearchManPulseScale:
 SearchManSpawnReticle:
     push {lr}
     push {r0,r2,r5}
-    mov r0,0x17
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1,r2,r5}
@@ -440,6 +430,8 @@ SearchManSpawnReticle:
     strh r1,[r0,0x16]
     str r2,[r0,0x64]
     str r5,[r0,0x4C]
+    mov r1,TYPE4_KIND_SEARCH_RETICLE
+    str r1,[r0,CUSTOM_OBJECT_KIND]
 @@done:
     pop {pc}
     .pool
@@ -784,7 +776,7 @@ SearchManReticleFindBounds:
 SearchManHitSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x2C
+    mov r0,CUSTOM_TYPE3_ID
     EngineCall SPAWN_TYPE3
     mov r0,r5
     pop {r1-r3,r5}
@@ -797,6 +789,8 @@ SearchManHitSpawn:
     str r6,[r0,0x2C]
     ldrh r1,[r5,0x16]
     strh r1,[r0,0x16]
+    mov r1,TYPE3_KIND_SEARCH_HIT
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     ldrb r1,[r0]
     mov r2,0x10
     orr r1,r2
@@ -806,31 +800,6 @@ SearchManHitSpawn:
     .pool
 
 SearchManHitMain:
-    ldr r0,[r5,0x78]
-    ldr r1,=ROLLARROW_PROJECTILE_TAG
-    cmp r0,r1
-    bne @@bugcharge
-    ldr r0,=RollArrowProjectileMain + 1
-    bx r0
-@@bugcharge:
-    ldr r1,=BUGCHARGE_PROJECTILE_TAG
-    cmp r0,r1
-    bne @@bugcharge_gospel
-    ldr r0,=BugChargeProjectileMain + 1
-    bx r0
-@@bugcharge_gospel:
-    ldr r1,=BUGCHARGE_GOSPEL_TAG
-    cmp r0,r1
-    bne @@laser
-    ldr r0,=BugChargeGospelMain + 1
-    bx r0
-@@laser:
-    ldr r1,=0x4C484954                  // LaserMan's tagged type-3 row hit
-    cmp r0,r1
-    bne @@searchman
-    ldr r0,=LaserManHitMain + 1
-    bx r0
-@@searchman:
     push {lr}
     ldrb r0,[r5,0x08]
     cmp r0,0

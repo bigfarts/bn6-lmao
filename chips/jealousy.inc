@@ -20,7 +20,6 @@
     .dw JealousyIcon,JealousyImage,JealousyPalette
 
 .definelabel JEALOUSY_TIMEFREEZE_ENTRY,      0x0802CCD0 // family 0x15, subfamily 0x07
-.definelabel TYPE4_JEALOUSY_ENTRY,           0x08004438 // LifeSync's released type-4 slot 0x5C
 
 // BN6 equivalents of the BN5 Jealousy-specific helpers. The generic
 // time-freeze lifecycle entry points shared with SignalRed live in common.inc.
@@ -34,20 +33,17 @@
 .org JEALOUSY_TIMEFREEZE_ENTRY
 .dw JealousyTimeFreezeSpawn + 1
 
-.org TYPE4_JEALOUSY_ENTRY
-.dw JealousyMain + 1
-
 .autoregion
 .align 4
 JealousyCodeStart:
 
 // BN5 attack-family wrapper at 0x080E4540, translated to LifeSync's released
-// BN6 object ID. r6 is the attack ID and r7 is the time-freeze completion
+// BN6 Type-4 hub. r6 is the attack ID and r7 is the time-freeze completion
 // pointer supplied by the common attack-family dispatcher.
 JealousyTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x5C
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1-r3,r5}
@@ -60,6 +56,8 @@ JealousyTimeFreezeSpawn:
     strb r1,[r0,0x16]
     str r6,[r0,0x2C]
     str r7,[r0,0x30]
+    mov r1,TYPE4_KIND_JEALOUSY
+    str r1,[r0,CUSTOM_OBJECT_KIND]
 @@done:
     pop {pc}
     .pool

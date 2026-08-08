@@ -41,9 +41,19 @@ contain a usable SearchMan actor/reticle/hit set.
 | Hook | BN6 file offset | Patched target |
 | --- | ---: | ---: |
 | time-freeze subfamily `0x0E` | `0x02CD94` | `SearchManTimeFreezeSpawn` |
-| free type-1 slot `0x31` | `0x003D60` | `SearchManObjectMain` |
-| free type-3 slot `0x2C` | `0x003F74` | `SearchManHitMain` |
-| free type-4 slot `0x17` | `0x004324` | `SearchManReticleMain` |
+| shared type-1 ID `0x30` | `0x003D5C` | `CustomType1Main` |
+| shared type-3 ID `0x2C` | `0x003F74` | `CustomType3Main` |
+| shared type-4 ID `0x5C` | `0x004438` | `CustomType4Main` |
+
+The three object hooks are project-wide rather than SearchMan-specific. Every
+imported object keeps its native BN6 class, claims that class's single custom
+ID, and stores a logical kind at object word `+0x7C`. `object_types.inc` uses
+that kind to select the real controller from one table per class. Each kind is
+derived inline from its table entry as `(Entry - Table) / 4 + 1`, following the
+same pattern as the derived indices in `sprites.inc`; there is no separately
+maintained list of numeric kind labels. A zero, stale, or out-of-range kind
+frees the object instead of interpreting it as another controller. All former
+feature-specific object entries remain native and unmodified.
 
 Runtime code and imported assets are allocated from file offset `0x800000`
 onward in an expanded 16 MiB image; exact addresses are selected by Armips.
@@ -95,8 +105,9 @@ The hit also loads packed value `0x00010401` and calls BN5's type-4 `0x0A`
 palette-object wrapper at `0x080E1158`. Its variant-1 state is the four-frame
 whole-screen whitening effect. BN6 retains the state machine, but schedules
 its native `0x0A` slot only after this time-freeze sequence exits. The port
-therefore runs that same palette write/restore state in released slot `0x8D`,
-which is updated during time freeze and places the flash on the actual hit.
+therefore runs that same palette write/restore state through the shared custom
+type-4 ID with the Chaos flash kind, which is updated during time freeze and
+places the flash on the actual hit.
 BN6 splits the rendered scene across palette slots `0x14` and `0x15`; writing
 only one leaves either the field or the actors colored. The translated state
 writes and restores both slots together, producing four full-screen white
@@ -172,12 +183,12 @@ count once. Its final 90-frame state refreshes the native chip-delete overlay
 and runs the original link-battle cleanup calls before entering the generic
 type-4 outro.
 
-LifeSync is chip ID `0xBF` in BN6. Its released dispatch/object slots are:
+LifeSync is chip ID `0xBF` in BN6. Its released launcher and object entry are:
 
 | Hook | BN6 file offset | Patched target |
 | --- | ---: | ---: |
 | family `0x15`, subfamily `0x07` | `0x02CCD0` | `JealousyTimeFreezeSpawn` |
-| type-4 slot `0x5C` | `0x004438` | `JealousyMain` |
+| shared type-4 ID `0x5C` | `0x004438` | `CustomType4Main` |
 
 BN6 retains direct equivalents of all five generic type-4 lifecycle states and
 of Jealousy's side comparison, chip-list lookup, panel predicate, overlay,
@@ -212,9 +223,10 @@ its owner for 50 frames. At timer value 42, `0x080E67A4` plays SFX `0x15D`.
 
 BN6 CopyDamage is chip ID `0xBE`. The port keeps that Standard-chip library
 slot and uses the unused family-`0x15`/subfamily-`0x22` dispatch at file offset
-`0x02CD3C`. Its controller shares Jealousy's released type-4 slot `0x5C`
-through a private tail-word tag. The common BN6 time-freeze lifecycle supplies
-the intro, freeze, outro, and cleanup states. BN6 no longer keeps Blue Moon's
+`0x02CD3C`. Its controller and aura use the project-wide custom type-4 ID
+`0x5C`, with distinct inline-derived kinds selecting their controllers. The
+common BN6 time-freeze lifecycle supplies the intro, freeze, outro, and cleanup
+states. BN6 no longer keeps Blue Moon's
 battle-kind enum in the same byte: its native link-only paths instead read the
 battle configuration flags through `0x0802D246` and test bit `0x08`, which the
 port uses for the equivalent gate.
@@ -258,12 +270,11 @@ marker `0x8B` rather than BN5's `0x8A`, because native BgDthThd already uses
 `0x8A`; HubBatch uses `0x94`. Every marker other than zero and `0x8B` is
 forwarded to the original version-specific launcher, preserving PunchArm,
 NeedlArm, PuzzlArm, BoomrArm, DarkInvs, HubBatch, and BgDthThd. The two imported
-controllers carry their private packed markers into shared type-4 slot `0x84`,
-where zero selects `SignalRedTimeFreezeMain`, `0x8B` selects
-`BugChargeSharedMain`, and every other marker remains native. BugCharge copies
-`0x8B` into its charge-head visual and uses a tail tag internally to distinguish
-that visual from its controller. FolderBack's outer tagged dispatcher
-tail-calls this shared selector for every non-FolderBack object.
+controllers are then spawned through the shared custom type-4 ID `0x5C` and
+distinguished by their `+0x7C` kinds. BugCharge's charge-head visual has its own
+kind in the same table. Native type-4 entry `0x84` is no longer patched, and
+FolderBack is another direct entry in the shared custom table rather than an
+outer dispatcher.
 
 Runtime tracing of Colonel BugCharge identifies group `0x0C`/index `0x43` as
 both the stationary and moving Gospel archive. The stationary object is 24
@@ -305,17 +316,15 @@ SignalRed and installs the translated controllers at these hooks:
 | Hook | BN6 file offset | Patched target |
 | --- | ---: | ---: |
 | family `0x15`, subfamily `0x26` | `0x02CD4C` | `SignalRedBugChargeTimeFreezeDispatch` |
-| shared type-4 slot `0x84` | `0x0044D8` | `FolderBackSharedMain` (then `SignalRedBugChargeSharedMain`) |
+| shared type-4 ID `0x5C` | `0x004438` | `CustomType4Main` |
 
 The unified sprite installer appends `SignalRedBattleSprite` to group `0x10`
 at derived index `0x61`; it does not modify the native entry formerly used by
 the port.
 
-BN6 has only two genuinely free type-3 slots, already used by SearchMan and
-ChaosLrd. SignalRed therefore shares ChaosLrd's slot `0x2D`: its spawner tags
-the otherwise unused object tail word at `+0x78`, and the common slot dispatch
-selects the SignalRed controller only for that tag. Untagged ChaosLrd objects
-continue through their original controller.
+SignalRed's persistent light uses the shared custom type-3 ID `0x2C`. Its
+inline-derived kind selects `SignalRedObjectMain` directly, alongside the
+ChaosLrd, SearchMan, LaserMan, RollArrow, and BugCharge type-3 controllers.
 
 Blue Moon also registers the light in its per-owner deployable list through
 `0x0800B230` and unregisters it through `0x0800B272`. Their structurally
@@ -396,10 +405,12 @@ flame actor. Type-4 `0x71` is implemented at `0x080E8ACC`, loads sprite group
 archive occupies BN5 ROM `0x36F074`-`0x36F7BC`; group `0x10`/index `0x48` at
 `0x36E908` is a different vertical-column effect.
 
-The port translates type-4 `0x89` and `0x71` into released BN6 type-4 slots
-`0x81` and `0x82`. Both use the imported archive through released BN6 sprite
-group `0x14`/index `0x21`. The damage contacts remain separate native BN6
-objects, matching BN5's split between collision and visible flame actors.
+The port translates type-4 `0x89` and `0x71` into distinct strike and flame
+kinds behind the shared custom type-4 ID `0x5C`. Both use the imported archive
+through released BN6 sprite group `0x14`/index `0x21`. The damage contacts
+remain separate native BN6 objects, matching BN5's split between collision and
+visible flame actors. The main DeathPhoenix controller likewise uses its own
+kind behind the shared custom type-1 ID `0x30`.
 
 After the twelfth strike and the phoenix's disappear phase, the controller
 checks BN6's saved-Navi record at `0x0203C960`. The record's backing pointer is
@@ -462,9 +473,9 @@ on her panel for the native animation-0 and animation-4 holds, then disappears;
 there is no horizontal retreat.
 
 The port keeps the heart-arrow in type-3, matching Blue Moon and BN6's
-counter-hit ownership path. It shares SearchMan's otherwise-free type-3 slot
-`0x2C` through the `RARW` tag. Hosting the collision-bearing arrow in a
-type-1 slot works for ordinary damage but corrupts the native counter response.
+counter-hit ownership path. It uses the Roll-arrow kind behind the shared
+custom type-3 ID `0x2C`. Hosting the collision-bearing arrow in type 1 works
+for ordinary damage but corrupts the native counter response.
 
 The earlier `0x080C8644` group-`0x08`/index-`0x0D` trace was KendoMan, and
 the paired group-`0x0C`/index-`0x35` object was unrelated. Neither is used by
@@ -472,8 +483,9 @@ this port.
 
 The BN6 port keeps TrainArrow's IDs `0x18`-`0x1A`, routes them through the
 already released Navi-family dispatch used by SearchMan, and distinguishes the
-three IDs in that shared entry. Released type-1 slots `0x53` and `0x59` host
-Roll and the straight-moving arrow. The arrow uses BN6's native collision
+three IDs in that shared launcher. Roll uses the shared custom type-1 ID
+`0x30`, while the straight-moving arrow uses the shared custom type-3 ID
+`0x2C`. The arrow uses BN6's native collision
 lifecycle with BN4's `8/5/3` setup and hit-effect `9`, so it travels at seven
 pixels per frame, stops on the first real contact, and invokes BN6's built-in
 loaded-chip deletion response rather than manufacturing a damage hit on every
@@ -526,12 +538,12 @@ preserves all five values so Up, Down, and Left retain their distinct beam
 transforms rather than collapsing to the yellow palette-only appearance.
 
 The BN6 port retains HeatMan's IDs `0xE3`-`0xE5`, family `0x1B`, and subfamily
-`0x02`, replacing that family's dispatch at `0x0802CD64`. Released type-1 slot
-`0x30` at `0x08003D5C` hosts the actor and visible beam. Both use foreground
+`0x02`, replacing that family's dispatch at `0x0802CD64`. The shared custom
+type-1 ID `0x30` hosts the actor and visible beam under separate kinds. Both use foreground
 OAM priority 1, which places the beam in front of targets and field objects;
 the earlier-allocated actor still wins their same-priority overlap at the
-muzzle. LaserMan's row-hit objects share SearchMan's working type-3 slot
-`0x2C` through the `LHIT` tag. Blue Moon's collision region `0x0B` is not a
+muzzle. LaserMan's row-hit objects use their own kind behind shared custom
+type-3 ID `0x2C`. Blue Moon's collision region `0x0B` is not a
 compatible attack mask in BN6, so the port seeds each hit with BN6's proven
 normal attack region 25 before using the native collision helpers. The final
 `FD` event uses SearchMan's exact working region-25 collision initialization

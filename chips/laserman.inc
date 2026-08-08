@@ -43,16 +43,11 @@
 
 .definelabel LASERMAN_SFX_SUMMON,            0x01DB // exact BN4 SFX 0x0B0
 .definelabel LASERMAN_SFX_FIRE,              0x01DD // exact BN4 SFX 0x103
-.definelabel LASERMAN_LASER_TAG,             0x4C415345
-.definelabel LASERMAN_HIT_TAG,               0x4C484954
 
 .definelabel TIMEFREEZE_DISPATCH_HEATMAN,    0x0802CD64
-.definelabel TYPE1_LASERMAN_ENTRY,           0x08003D5C // released type-1 slot 0x30
 
 .org TIMEFREEZE_DISPATCH_HEATMAN
 .dw LaserManTimeFreezeSpawn + 1
-.org TYPE1_LASERMAN_ENTRY
-.dw LaserManSlotMain + 1
 
 .autoregion
 .align 4
@@ -64,7 +59,7 @@ LaserManCodeStart:
 LaserManTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x30
+    mov r0,CUSTOM_TYPE1_ID
     EngineCall SPAWN_TYPE1
     mov r0,r5
     pop {r1-r3,r5}
@@ -87,29 +82,17 @@ LaserManTimeFreezeSpawn:
     str r5,[r0,0x4C]
     str r6,[r0,0x2C]
     str r7,[r0,0x64]
-    mov r1,0
-    str r1,[r0,0x78]                   // actor half of the shared slot
+    mov r1,TYPE1_KIND_LASER_ACTOR
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     mov r1,1
     strb r1,[r7]
 @@done:
     pop {pc}
     .pool
 
-// The actor and visible beam share released type-1 slot 0x30. Both use the
-// foreground battle-sprite priority; because the actor is allocated first it
-// remains in front at the muzzle, while the beam crosses in front of targets
-// and field objects as it does in Blue Moon. LaserMan's tagged collisions
-// share SearchMan's proven type-3 hit slot 0x2C.
-LaserManSlotMain:
-    ldr r0,[r5,0x78]
-    ldr r1,=LASERMAN_LASER_TAG
-    cmp r0,r1
-    bne @@actor
-    ldr r1,=LaserManLaserMain + 1
-    bx r1
-@@actor:
-    b LaserManActorMain
-    .pool
+// The actor and visible beam share the project Type-1 hub. Both use foreground
+// battle-sprite priority; allocation order keeps the actor in front at the
+// muzzle while the beam crosses in front of targets and field objects.
 
 // ----- LaserMan actor ------------------------------------------------------
 
@@ -328,7 +311,7 @@ LaserManActorDestroy:
 LaserManLaserSpawn:
     push {r4,r6,r7,lr}
     push {r5}
-    mov r0,0x30
+    mov r0,CUSTOM_TYPE1_ID
     ldrb r4,[r5,0x05]                 // implicit spawn field +4: command
     EngineCall SPAWN_TYPE1
     mov r4,r5
@@ -350,8 +333,8 @@ LaserManLaserSpawn:
     ldr r0,[r5,0x2C]
     str r0,[r4,0x2C]
     str r5,[r4,0x4C]
-    ldr r0,=LASERMAN_LASER_TAG
-    str r0,[r4,0x78]
+    mov r0,TYPE1_KIND_LASER_BEAM
+    str r0,[r4,CUSTOM_OBJECT_KIND]
     ldrb r0,[r4]
     mov r1,0x10
     orr r0,r1
@@ -741,7 +724,7 @@ LaserManSpawnRowEvent:
 LaserManHitSpawn:
     push {r0-r2,r4,r6,r7,lr}
     push {r5}
-    mov r0,0x2C                       // shared SearchMan type-3 hit slot
+    mov r0,CUSTOM_TYPE3_ID
     mov r4,25                         // BN6 normal attack collision region
     EngineCall SPAWN_TYPE3
     mov r4,r5
@@ -764,16 +747,14 @@ LaserManHitSpawn:
     // this damage event contacts the opposing Navi.
     ldr r0,[r5,0x2C]
     str r0,[r4,0x2C]
-    ldr r0,=LASERMAN_HIT_TAG
-    str r0,[r4,0x78]
     b @@activate
 @@command_effect:
     mov r0,0
     str r0,[r4,0x2C]
     strb r0,[r4,0x0A]                 // conditional Right-cache guard
-    ldr r0,=LASERMAN_HIT_TAG
-    str r0,[r4,0x78]
 @@activate:
+    mov r0,TYPE3_KIND_LASER_HIT
+    str r0,[r4,CUSTOM_OBJECT_KIND]
     ldrb r0,[r4]
     mov r1,0x10                       // active during the frozen attack
     orr r0,r1

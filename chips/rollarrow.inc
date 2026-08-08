@@ -9,7 +9,6 @@
 .definelabel ROLLARROW3_ID,                 0x1A
 .definelabel ROLLARROW_SFX_SUMMON,          0x01DB
 .definelabel ROLLARROW_SFX_FIRE,            0x01DC
-.definelabel ROLLARROW_PROJECTILE_TAG,       0x57524152 // "RARW"
 
 .org CHIP_DATA + ROLLARROW1_ID * 0x2C
     .db 0x00,0x05,0x13,0xFF             // A, F, T
@@ -42,11 +41,6 @@
     .db 0x01,0xFF
     .dw RollArrowIcon3,RollArrowImage,RollArrowPalette3
 
-.definelabel TYPE1_ROLL_ENTRY,              0x08003DE8 // released type-1 slot 0x53
-
-.org TYPE1_ROLL_ENTRY
-.dw RollArrowActorMain + 1
-
 .autoregion
 .align 4
 RollArrowCodeStart:
@@ -57,7 +51,7 @@ RollArrowCodeStart:
 RollArrowTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r4-r5}
-    mov r0,0x53
+    mov r0,CUSTOM_TYPE1_ID
     EngineCall SPAWN_TYPE1
     mov r0,r5
     pop {r1-r5}
@@ -71,6 +65,8 @@ RollArrowTimeFreezeSpawn:
     str r5,[r0,0x4C]
     str r6,[r0,0x2C]
     str r7,[r0,0x64]
+    mov r1,TYPE1_KIND_ROLL_ACTOR
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     mov r1,1
     strb r1,[r7]
 @@done:
@@ -283,8 +279,8 @@ RollArrowProjectileSpawn:
     // Blue Moon's generic heart-arrow is a type-3 battle attack. Keeping it
     // in that class is required by BN6's counter-hit ownership path; a
     // collision-bearing type-1 object corrupts that path when the hit is a
-    // counter. Share SearchMan's tagged type-3 slot instead.
-    mov r0,0x2C
+    // counter. Route it through the project Type-3 hub.
+    mov r0,CUSTOM_TYPE3_ID
     mov r4,8
     EngineCall SPAWN_TYPE3
     mov r4,r5
@@ -298,8 +294,8 @@ RollArrowProjectileSpawn:
     strh r0,[r4,0x16]
     str r6,[r4,0x2C]
     str r5,[r4,0x4C]
-    ldr r0,=ROLLARROW_PROJECTILE_TAG
-    str r0,[r4,0x78]
+    mov r0,TYPE3_KIND_ROLL_ARROW
+    str r0,[r4,CUSTOM_OBJECT_KIND]
 
     // Blue Moon spawns the heart-arrow at Roll's exact bow origin:
     // facing * 8 px in X, one pixel above her Y origin, and 36 px in Z.

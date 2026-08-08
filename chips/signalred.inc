@@ -25,15 +25,12 @@
     .dw SignalRedIcon,SignalRedImage,SignalRedPalette
 
 .definelabel SIGNALRED_TIMEFREEZE_ENTRY,    0x0802CD4C // shared family 0x15, subfamily 0x26
-.definelabel TYPE4_SIGNALRED_ENTRY,         0x080044D8 // shared type-4 slot 0x84
 .definelabel SIGNALRED_SFX_SPAWN,           0x01DA // relocated slot populated with Blue Moon SFX 0x00A0
 .definelabel SIGNALRED_SFX_GREEN,           0x00D1 // BN6 match for Blue Moon SFX 0x015C
 .if FALZAR
     .definelabel NATIVE_SHARED_TIMEFREEZE_SPAWN, 0x080E979C
-    .definelabel NATIVE_SHARED_TYPE4_MAIN,       0x080E9570
 .else
     .definelabel NATIVE_SHARED_TIMEFREEZE_SPAWN, 0x080EAADC
-    .definelabel NATIVE_SHARED_TYPE4_MAIN,       0x080EA8B0
 .endif
 .definelabel DUST_FIRE_SPRITE_TABLE_PTR_0,  0x08012010
 .definelabel DUST_FIRE_SPRITE_TABLE_PTR_1,  0x08012014
@@ -45,9 +42,6 @@
 
 .org SIGNALRED_TIMEFREEZE_ENTRY
 .dw SignalRedBugChargeTimeFreezeDispatch + 1
-
-.org TYPE4_SIGNALRED_ENTRY
-.dw SignalRedBugChargeSharedMain + 1
 
 // DustCross stores a four-bit obstacle kind for each sucked object. Native
 // BN6 uses kinds 0-14; reserve kind 15 for SignalRed and redirect both the
@@ -94,29 +88,11 @@ SignalRedBugChargeTimeFreezeDispatch:
     bx r3
     .pool
 
-// FolderBack installs the final slot hook after this include. Route the two
-// private packed markers directly and send every native marker to the original
-// family controller. BugCharge then uses its tail tag to distinguish its
-// controller from its charge-head visual.
-SignalRedBugChargeSharedMain:
-    ldr r0,[r5,0x2C]
-    lsr r0,r0,16
-    cmp r0,0
-    beq SignalRedTimeFreezeMain
-    cmp r0,BUGCHARGE_ROUTE_MARKER
-    bne @@native
-    ldr r0,=BugChargeSharedMain + 1
-    bx r0
-@@native:
-    ldr r0,=NATIVE_SHARED_TYPE4_MAIN + 1
-    bx r0
-    .pool
-
 // r6 is the attack ID; r7 is the native time-freeze completion pointer.
 SignalRedTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x84
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1-r3,r5}
@@ -130,6 +106,8 @@ SignalRedTimeFreezeSpawn:
     strh r1,[r0,0x16]
     str r6,[r0,0x2C]
     str r7,[r0,0x30]
+    mov r1,TYPE4_KIND_SIGNALRED
+    str r1,[r0,CUSTOM_OBJECT_KIND]
 @@done:
     pop {pc}
     .pool
@@ -199,8 +177,7 @@ SignalRedLaunchEffect:
 // Create the light on the panel immediately in front of the chip user. The
 // BN6 panel-coordinate conversion replaces Blue Moon's equivalent helper;
 // the resulting fixed-point coordinates are passed through BN6's type-3
-// allocator. SignalRed shares ChaosLord's only remaining no-op type-3 slot
-// and marks its objects with a private tail-word tag for dispatch.
+// allocator. The persistent light uses its own project Type-3 hub kind.
 SignalRedSpawnPersistent:
     push {r4,r6,r7,lr}
     ldr r4,[r5,0x4C]
@@ -224,7 +201,7 @@ SignalRedSpawnPersistent:
     mov r3,0
     push {r4-r7}
     mov r4,0
-    mov r0,0x2D
+    mov r0,CUSTOM_TYPE3_ID
     EngineCall SPAWN_TYPE3
     mov r0,r5
     pop {r4-r7}
@@ -237,8 +214,8 @@ SignalRedSpawnPersistent:
     str r4,[r0,0x4C]
     ldr r1,[r5,0x2C]
     str r1,[r0,0x2C]
-    mov r1,0x53
-    str r1,[r0,0x78]
+    mov r1,TYPE3_KIND_SIGNALRED
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     ldrb r1,[r0]
     mov r2,0x10
     orr r1,r2
@@ -255,8 +232,6 @@ SignalRedSpawnPersistent:
     pop {r4,r6,r7,pc}
     .pool
 
-// SignalRed shares type-3 slot 0x2D with ChaosLord. ChaosAttackMain checks
-// the tail-word tag before its own state dispatch and calls this controller.
 SignalRedObjectMain:
     push {lr}
     ldrb r0,[r5,0x08]

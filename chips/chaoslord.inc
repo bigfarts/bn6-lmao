@@ -33,27 +33,25 @@
 .endif
 
 .definelabel CHAOS_TIMEFREEZE_ENTRY,     0x0802CDB8 // subfamily 0x17
-.definelabel TYPE1_CHAOS_ENTRY,          0x08003DE0 // free type-1 slot 0x51
-.definelabel TYPE1_CHAOS_BALL_ENTRY,     0x08003DE4 // free type-1 slot 0x52
-.definelabel TYPE3_CHAOS_ATTACK_ENTRY,   0x08003F78 // free type-3 slot 0x2D
-.definelabel TYPE4_CHAOS_AURA_ENTRY,     0x080044F8 // BigHook's released type-4 slot 0x8C
-.definelabel TYPE4_CHAOS_BURST_ENTRY,    0x080044FC // BigHook's released type-4 slot 0x8D
 
 .definelabel CHAOS_PANEL_SEARCH,         0x08015E46
 
-// Battle dispatch and sprite archive slots.
+// Battle-effect helpers used by BN5's dormant ChaosLord Ball Bass object.
+// Gregar and Falzar contain matching implementations at different addresses.
+.if FALZAR
+.definelabel CHAOS_IMPACT_EFFECT,      0x080E2FE8
+.definelabel CHAOS_DAMAGE_OBJECT,      0x080C536A
+.else
+.definelabel CHAOS_IMPACT_EFFECT,      0x080E4328
+.definelabel CHAOS_DAMAGE_OBJECT,      0x080C6BDA
+.endif
+.definelabel CHAOS_PALETTE_WRITE,      0x08002378
+.definelabel CHAOS_PALETTE_RESTORE,    0x0800239A
+
+// The chip-family launcher remains private; every spawned battle object uses
+// the project-wide class hub declared in object_types.inc.
 .org CHAOS_TIMEFREEZE_ENTRY
 .dw ChaosTimeFreezeSpawn + 1
-.org TYPE1_CHAOS_ENTRY
-.dw ChaosControllerMain + 1
-.org TYPE1_CHAOS_BALL_ENTRY
-.dw ChaosBallMain + 1
-.org TYPE3_CHAOS_ATTACK_ENTRY
-.dw ChaosAttackMain + 1
-.org TYPE4_CHAOS_AURA_ENTRY
-.dw ChaosAuraMain + 1
-.org TYPE4_CHAOS_BURST_ENTRY
-.dw ChaosBurstOrTeardownMain + 1
 
 .autoregion
 .align 4
@@ -62,7 +60,7 @@ ChaosCodeStart:
 ChaosTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x51
+    mov r0,CUSTOM_TYPE1_ID
     EngineCall SPAWN_TYPE1
     mov r0,r5
     pop {r1-r3,r5}
@@ -79,6 +77,8 @@ ChaosTimeFreezeSpawn:
     // the adjacent bytes during cut-in arbitration, so activate only the flag
     // here; the controller normalizes the full record once arbitration ends.
     str r7,[r0,0x48]
+    mov r1,TYPE1_KIND_CHAOS_CONTROLLER
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     mov r1,1
 ChaosSetCompletionActive:
     strb r1,[r7]
@@ -269,13 +269,15 @@ ChaosBallPhase4:
 ChaosBallSpawn:
     push {lr}
     push {r5}
-    mov r0,0x52
+    mov r0,CUSTOM_TYPE1_ID
     EngineCall SPAWN_TYPE1
     mov r0,r5
     pop {r5}
     cmp r0,0
     beq @@done
     str r5,[r0,0x4C]
+    mov r1,TYPE1_KIND_CHAOS_BALL
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     ldrb r1,[r5,0x16]
     strb r1,[r0,0x16]
     ldrb r1,[r0]
@@ -772,19 +774,20 @@ ChaosDeleteObjects:
     bne @@loop
     pop {pc}
 
-// BN5 type-4 0x47/0x4B spawners, sharing BN6's released type-4 slot. The low
-// byte of r4 distinguishes the five persistent Nebula Gray layers from the
-// short entrance bursts.
+// BN5 type-4 0x47/0x4B helpers share the project Type-4 hub while retaining
+// their independent native state machines.
 ChaosSpawnAura:
     push {lr}
     push {r5-r7}
-    mov r0,0x8C
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r5-r7}
     cmp r0,0
     beq @@done
     str r5,[r0,0x4C]
+    mov r1,TYPE4_KIND_CHAOS_AURA
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     ldrh r1,[r5,0x16]
     strh r1,[r0,0x16]
 @@done:
@@ -797,7 +800,7 @@ ChaosSpawnBurst:
     // launch vector. BN6's allocator uses r6 internally, so preserve it
     // explicitly before copying that implicit argument into the new object.
     push {r5,r6}
-    mov r0,0x8D
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r5,r6}
@@ -805,11 +808,8 @@ ChaosSpawnBurst:
     beq @@done
     str r5,[r0,0x4C]
     str r6,[r0,0x70]
-    // Slot 0x8D is reused for the final cosmetic teardown after every burst
-    // has expired. Keep a stable discriminator outside the packed spawn
-    // arguments; the burst lifetime at +0x04 changes every frame.
-    mov r1,0
-    str r1,[r0,0x7C]
+    mov r1,TYPE4_KIND_CHAOS_BURST
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     ldrh r1,[r5,0x16]
     strh r1,[r0,0x16]
     // The controller calls BN5's 0x080E5FD2 wrapper, not the lower-level
@@ -826,14 +826,14 @@ ChaosSpawnBurst:
 ChaosTeardownSpawn:
     push {lr}
     push {r5}
-    mov r0,0x8D
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r5}
     cmp r0,0
     beq @@done
-    mov r1,1
-    str r1,[r0,0x7C]
+    mov r1,TYPE4_KIND_CHAOS_TEARDOWN
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     ldrh r1,[r5,0x16]
     strh r1,[r0,0x16]
 @@done:
@@ -842,19 +842,19 @@ ChaosTeardownSpawn:
 
 // BN6 retains BN5's type-4 0x0A palette effect, but schedules that native
 // slot only after this time-freeze attack exits. Host the same variant-1
-// state in released slot 0x8D so its four frames occur at impact.
+// state in the custom hub so its four frames occur at impact.
 ChaosFlashSpawn:
     push {lr}
     push {r5-r7}
-    mov r0,0x8D
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r5-r7}
     cmp r0,0
     beq @@done
     str r7,[r0,0x60]
-    mov r1,2
-    str r1,[r0,0x7C]
+    mov r1,TYPE4_KIND_CHAOS_FLASH
+    str r1,[r0,CUSTOM_OBJECT_KIND]
     ldrb r1,[r0]
     mov r2,0x14
     orr r1,r2
@@ -873,7 +873,7 @@ ChaosAttackSpawn:
     // BN5's allocator preserves the implicit r6/r7 payload. BN6's type-3
     // allocator does not, so retain the damage data and parent pointer here.
     push {r5-r7}
-    mov r0,0x2D
+    mov r0,CUSTOM_TYPE3_ID
     EngineCall SPAWN_TYPE3
     mov r0,r5
     pop {r5-r7}
@@ -883,6 +883,8 @@ ChaosAttackSpawn:
     strb r3,[r0,0x0E]
     str r6,[r0,0x2C]
     str r7,[r0,0x4C]
+    mov r3,TYPE3_KIND_CHAOS_ATTACK
+    str r3,[r0,CUSTOM_OBJECT_KIND]
     ldrh r3,[r5,0x16]
     strh r3,[r0,0x16]
     ldrb r1,[r0]
@@ -895,11 +897,6 @@ ChaosAttackSpawn:
 
 ChaosAttackMain:
     push {lr}
-    // SignalRed shares this otherwise unavailable type-3 slot. Its spawner
-    // sets a tag in an unused tail word; ChaosLord objects retain zero here.
-    ldr r0,[r5,0x78]
-    cmp r0,0x53
-    beq @@signalRed
     ldrb r0,[r5,0x08]
     cmp r0,0
     beq @@init
@@ -914,9 +911,6 @@ ChaosAttackMain:
     bl ChaosAttackUpdate
 @@animate:
     EngineCall OBJECT_UPDATE
-    pop {pc}
-@@signalRed:
-    bl SignalRedObjectMain
     pop {pc}
     .pool
 
@@ -1469,21 +1463,6 @@ ChaosAuraFade:
     pop {pc}
 
 // ----- BN5 type-4 0x4B ChaosLord entrance burst ---------------------------
-
-// BigHook supplied two released type-4 slots. Slot 0x8D hosts three kinds of
-// ChaosLord helper object; +0x7C is a stable discriminator outside every
-// object's mutable packed arguments.
-ChaosBurstOrTeardownMain:
-    ldr r0,[r5,0x7C]
-    cmp r0,1
-    beq @@teardown
-    cmp r0,2
-    beq @@flash
-    b ChaosBurstMain
-@@teardown:
-    b ChaosTeardownMain
-@@flash:
-    b ChaosFlashMain
 
 ChaosBurstMain:
     push {lr}

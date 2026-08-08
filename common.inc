@@ -90,6 +90,14 @@
 .definelabel OBJECT_LOAD_NAVI_SPRITE,  0x0801BE2A
 .definelabel SCREEN_SHAKE_SET,         0x080302A8
 
+// Every imported battle object uses one project-owned dispatch ID per native
+// object class.  The allocator still creates independent object records; the
+// word at +0x7C selects the logical controller behind the shared ID.
+.definelabel CUSTOM_TYPE1_ID,           0x30 // released HeatMan family
+.definelabel CUSTOM_TYPE3_ID,           0x2C // genuinely free native entry
+.definelabel CUSTOM_TYPE4_ID,           0x5C // released LifeSync family
+.definelabel CUSTOM_OBJECT_KIND,        0x7C
+
 // Shared native lifecycle used by invisible type-4 time-freeze chip
 // controllers. Jealousy and SignalRed both replace only the chip-specific
 // effect state while retaining BN6's intro, freeze, outro, and free states.
@@ -98,24 +106,6 @@
 .definelabel TYPE4_TIMESTOP_FREEZE,     0x0800B9B0
 .definelabel TYPE4_TIMESTOP_OUTRO,      0x0800BC88
 .definelabel TYPE4_TIMESTOP_FREE,       0x0800BD34
-
-// SearchMan's free type-3 hit slot is shared by tagged imported projectiles.
-// Keep this tag global because SearchMan's dispatcher is assembled before the
-// BugCharge implementation that owns the object.
-.definelabel BUGCHARGE_PROJECTILE_TAG,   0x50434742 // "BGCP"
-.definelabel BUGCHARGE_GOSPEL_TAG,       0x47434742 // "BGCG"
-
-// Battle-effect helpers used by BN5's dormant ChaosLord Ball Bass object.
-// Gregar and Falzar contain matching implementations at different addresses.
-.if FALZAR
-.definelabel CHAOS_IMPACT_EFFECT,      0x080E2FE8
-.definelabel CHAOS_DAMAGE_OBJECT,      0x080C536A
-.else
-.definelabel CHAOS_IMPACT_EFFECT,      0x080E4328
-.definelabel CHAOS_DAMAGE_OBJECT,      0x080C6BDA
-.endif
-.definelabel CHAOS_PALETTE_WRITE,      0x08002378
-.definelabel CHAOS_PALETTE_RESTORE,    0x0800239A
 
 // Expanded-ROM code is outside Thumb BL range. Preserve r4 because it is an
 // implicit fifth argument to the object spawners, then branch through r12.

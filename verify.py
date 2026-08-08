@@ -181,34 +181,30 @@ def verify_version(
     # ROM offsets.
     dispatches = [
         (0x2CD64, "LaserManTimeFreezeSpawn"),
-        (0x3D5C, "LaserManSlotMain"),
         (0x2CD94, "SearchManTimeFreezeSpawn"),
-        (0x3D60, "SearchManObjectMain"),
-        (0x3F74, "SearchManHitMain"),
-        (0x4324, "SearchManReticleMain"),
         (0x2CDB8, "ChaosTimeFreezeSpawn"),
-        (0x3DE0, "ChaosControllerMain"),
-        (0x3DE4, "ChaosBallMain"),
-        (0x3F78, "ChaosAttackMain"),
-        (0x44F8, "ChaosAuraMain"),
-        (0x44FC, "ChaosBurstOrTeardownMain"),
         (0x2CCD0, "JealousyTimeFreezeSpawn"),
         (0x2CD3C, "BugChainTimeFreezeSpawn"),
-        (0x4438, "BugChainSharedMain"),
         (0x2CD4C, "SignalRedBugChargeTimeFreezeDispatch"),
         (0x2CD40, "FolderBackSpawn"),
-        (0x44D8, "FolderBackSharedMain"),
+        (0x2CDA0, "DeathPhoenixTimeFreezeSpawn"),
+        (0x3D5C, "CustomType1Main"),
+        (0x3F74, "CustomType3Main"),
+        (0x4438, "CustomType4Main"),
     ]
     for pointer_offset, target in dispatches:
         verify(u32(output, pointer_offset) == symbol(target) + 1, f"{label} {target} dispatch")
-    for pointer_offset, target in (
-        (0x3DE8, "RollArrowActorMain"),
-        (0x2CDA0, "DeathPhoenixTimeFreezeSpawn"),
-        (0x3CA0, "DeathPhoenixMain"),
-        (0x44CC, "DeathStrikeMain"),
-        (0x44D0, "DeathFlameMain"),
+    for start, length, description in (
+        (0x3CA0, 4, "CrossDiv type-1 entry"),
+        (0x3D60, 4, "SearchMan former type-1 entry"),
+        (0x3DE0, 12, "ChaosLord/RollArrow former type-1 entries"),
+        (0x3F78, 4, "ChaosLord former type-3 entry"),
+        (0x4324, 4, "SearchMan former type-4 entry"),
+        (0x44CC, 8, "DeathPhoenix former type-4 entries"),
+        (0x44D8, 4, "native shared type-4 entry 0x84"),
+        (0x44F8, 8, "ChaosLord former type-4 entries"),
     ):
-        verify(u32(output, pointer_offset) == symbol(target) + 1, f"{label} {target} dispatch")
+        verify(output[start:start + length] == original[start:start + length], f"{label} preserves {description}")
     verify(
         u32(output, 0x3224) == symbol("FolderBackType1DispatchTable"),
         f"{label} FolderBack type-1 proxy table dispatch",
@@ -306,6 +302,61 @@ def verify_version(
         ),
         f"{label} FolderBack type-1 proxy table includes counter family 0x5E",
     )
+    custom_object_tables = (
+        (
+            "CustomType1Table", "CustomType1TableEnd", "TYPE1_KIND_COUNT",
+            (
+                ("TYPE1_KIND_CHAOS_CONTROLLER", "ChaosControllerMain"),
+                ("TYPE1_KIND_CHAOS_BALL", "ChaosBallMain"),
+                ("TYPE1_KIND_ROLL_ACTOR", "RollArrowActorMain"),
+                ("TYPE1_KIND_SEARCH_ACTOR", "SearchManObjectMain"),
+                ("TYPE1_KIND_LASER_ACTOR", "LaserManActorMain"),
+                ("TYPE1_KIND_LASER_BEAM", "LaserManLaserMain"),
+                ("TYPE1_KIND_DEATHPHOENIX", "DeathPhoenixMain"),
+            ),
+        ),
+        (
+            "CustomType3Table", "CustomType3TableEnd", "TYPE3_KIND_COUNT",
+            (
+                ("TYPE3_KIND_CHAOS_ATTACK", "ChaosAttackMain"),
+                ("TYPE3_KIND_SIGNALRED", "SignalRedObjectMain"),
+                ("TYPE3_KIND_ROLL_ARROW", "RollArrowProjectileMain"),
+                ("TYPE3_KIND_SEARCH_HIT", "SearchManHitMain"),
+                ("TYPE3_KIND_LASER_HIT", "LaserManHitMain"),
+                ("TYPE3_KIND_BUGCHARGE_GOSPEL", "BugChargeGospelMain"),
+                ("TYPE3_KIND_BUGCHARGE_HIT", "BugChargeProjectileMain"),
+            ),
+        ),
+        (
+            "CustomType4Table", "CustomType4TableEnd", "TYPE4_KIND_COUNT",
+            (
+                ("TYPE4_KIND_CHAOS_AURA", "ChaosAuraMain"),
+                ("TYPE4_KIND_CHAOS_BURST", "ChaosBurstMain"),
+                ("TYPE4_KIND_CHAOS_TEARDOWN", "ChaosTeardownMain"),
+                ("TYPE4_KIND_CHAOS_FLASH", "ChaosFlashMain"),
+                ("TYPE4_KIND_SEARCH_RETICLE", "SearchManReticleMain"),
+                ("TYPE4_KIND_JEALOUSY", "JealousyMain"),
+                ("TYPE4_KIND_BUGCHAIN", "BugChainMain"),
+                ("TYPE4_KIND_BUGCHAIN_VISUAL", "BugChainVisualMain"),
+                ("TYPE4_KIND_BUGCHARGE", "BugChargeControllerMain"),
+                ("TYPE4_KIND_BUGCHARGE_HEAD", "BugChargeChargeHeadMain"),
+                ("TYPE4_KIND_SIGNALRED", "SignalRedTimeFreezeMain"),
+                ("TYPE4_KIND_FOLDERBACK", "FolderBackMain"),
+                ("TYPE4_KIND_DEATH_STRIKE", "DeathStrikeMain"),
+                ("TYPE4_KIND_DEATH_FLAME", "DeathFlameMain"),
+            ),
+        ),
+    )
+    for table_name, end_name, count_name, entries in custom_object_tables:
+        table = rom_offset(symbol(table_name))
+        verify(symbol(count_name) == len(entries), f"{label} {table_name} derived kind count")
+        verify(symbol(end_name) - symbol(table_name) == len(entries) * 4, f"{label} {table_name} extent")
+        for index, (kind_name, target_name) in enumerate(entries):
+            verify(symbol(kind_name) == index + 1, f"{label} {kind_name} derived kind")
+            verify(
+                u32(output, table + index * 4) == symbol(target_name) + 1,
+                f"{label} {table_name} routes {target_name}",
+            )
     verify(output[0x3E00:0x3E08] == original[0x3E00:0x3E08], f"{label} unused RollArrow type-1 slots")
     verify(output[0x3D70:0x3D78] == original[0x3D70:0x3D78], f"{label} native type-1 projectile slots")
     native_callback = 0xC4C12 if label == "Falzar" else 0xC6482
@@ -906,18 +957,25 @@ def verify_version(
     bugcharge_code = output[rom_offset(symbol("BugChargeCodeStart")):rom_offset(symbol("BugChargeCodeEnd"))]
     signalred_code = output[rom_offset(symbol("SignalRedCodeStart")):rom_offset(symbol("SignalRedCodeEnd"))]
     folderback_code = output[rom_offset(symbol("FolderBackCodeStart")):rom_offset(symbol("FolderBackCodeEnd"))]
+    object_types_code = output[rom_offset(symbol("ObjectTypesCodeStart")):rom_offset(symbol("ObjectTypesCodeEnd"))]
+    feature_code = b"".join((
+        search_code, roll_code, laser_code, chaos_code, jealousy_code,
+        bugchain_code, bugcharge_code, signalred_code, folderback_code,
+        output[rom_offset(symbol("DeathPhoenixCodeStart")):rom_offset(symbol("DeathPhoenixCodeEnd"))],
+    ))
+    verify(
+        sum(
+            1
+            for offset in range(0, len(feature_code) - 1, 2)
+            if u16(feature_code, offset) & 0xFFC0 == 0x67C0
+        ) == 28,
+        f"{label} every custom object spawner writes its +0x7C hub kind",
+    )
+    verify(object_types_code and any(byte != 0xFF for byte in object_types_code), f"{label} object-type hub code")
     verify(search_code and any(byte != 0xFF for byte in search_code), f"{label} SearchMan code")
     verify(roll_code and any(byte != 0xFF for byte in roll_code), f"{label} RollArrow code")
     verify(laser_code and any(byte != 0xFF for byte in laser_code), f"{label} LaserMan code")
     verify(struct.pack("<I", symbol("RollArrowTimeFreezeSpawn") + 1) in search_code, f"{label} RollArrow time-freeze route")
-    verify(struct.pack("<I", symbol("RollArrowProjectileMain") + 1) in search_code, f"{label} RollArrow tagged type-3 route")
-    verify(struct.pack("<I", symbol("ROLLARROW_PROJECTILE_TAG")) in search_code, f"{label} RollArrow type-3 tag")
-    verify(struct.pack("<I", symbol("BugChargeProjectileMain") + 1) in search_code, f"{label} BugCharge tagged type-3 route")
-    verify(struct.pack("<I", symbol("BUGCHARGE_PROJECTILE_TAG")) in search_code, f"{label} BugCharge type-3 tag")
-    verify(struct.pack("<I", symbol("LaserManHitMain") + 1) in search_code, f"{label} LaserMan tagged type-3 route")
-    verify(struct.pack("<I", symbol("LASERMAN_HIT_TAG")) in search_code, f"{label} LaserMan type-3 tag")
-    verify(struct.pack("<I", symbol("BugChargeGospelMain") + 1) in search_code, f"{label} BugCharge Gospel visual route")
-    verify(struct.pack("<I", symbol("BUGCHARGE_GOSPEL_TAG")) in search_code, f"{label} BugCharge Gospel visual tag")
     verify(
         b"\x01\xB4\x30\x1C\x00\x0C\x94\x28\x01\xBC" in search_code,
         f"{label} RollArrow packed-attack discriminator",
@@ -935,15 +993,6 @@ def verify_version(
         f"{label} SearchMan propagates translated Cursor element 0x40 into every shot object",
     )
     verify(chaos_code and any(byte != 0xFF for byte in chaos_code), f"{label} ChaosLrd code")
-    verify(
-        contains_thumb_bl(
-            output,
-            rom_offset(symbol("ChaosAttackMain")),
-            rom_offset(symbol("ChaosAttackInit")),
-            symbol("SignalRedObjectMain"),
-        ),
-        f"{label} ChaosLrd preserves SignalRed shared type-3 route",
-    )
     verify(
         output[rom_offset(symbol("ChaosSetCompletionActive")):rom_offset(symbol("ChaosSetCompletionActive")) + 2]
         == b"\x39\x70",
@@ -1005,12 +1054,6 @@ def verify_version(
         f"{label} Jealousy preserves every pulse and BN5's trap-independent final deletion",
     )
     verify(bugchain_code and any(byte != 0xFF for byte in bugchain_code), f"{label} BugChain code")
-    verify(struct.pack("<I", symbol("BUGCHAIN_TAG")) in bugchain_code, f"{label} BugChain controller tag")
-    verify(struct.pack("<I", symbol("BUGCHAIN_VISUAL_TAG")) in bugchain_code, f"{label} BugChain visual tag")
-    verify(
-        struct.pack("<I", symbol("JealousyMain") + 1) in bugchain_code,
-        f"{label} BugChain preserves Jealousy shared type-4 route",
-    )
     for target in (0x080005CD, 0x0802D247):
         verify(struct.pack("<I", target) in bugchain_code, f"{label} BugChain runtime target 0x{target:08X}")
     verify(b"\x08\x21\x08\x42" in bugchain_code, f"{label} BugChain link-battle flag test")
@@ -1030,24 +1073,7 @@ def verify_version(
     verify(struct.pack("<I", 0x02034887) not in bugcharge_code, f"{label} BugCharge has no BN4 Custom-turn counter")
     verify(signalred_code and any(byte != 0xFF for byte in signalred_code), f"{label} SignalRed code")
     native_shared_spawn = 0x080E979D if label == "Falzar" else 0x080EAADD
-    native_shared_main = 0x080E9571 if label == "Falzar" else 0x080EA8B1
     verify(struct.pack("<I", native_shared_spawn) in signalred_code, f"{label} native shared-family spawn route")
-    verify(struct.pack("<I", native_shared_main) in signalred_code, f"{label} native shared-family type-4 route")
-    signalred_shared_main = output[
-        rom_offset(symbol("SignalRedBugChargeSharedMain")):rom_offset(symbol("SignalRedTimeFreezeSpawn"))
-    ]
-    verify(
-        b"\xE8\x6A\x00\x0C\x00\x28" in signalred_shared_main
-        and b"\x8B\x28" in signalred_shared_main,
-        f"{label} replacement markers route before the native shared-slot fallback",
-    )
-    bugcharge_charge_spawn = output[
-        rom_offset(symbol("BugChargeSpawnChargeHead")):rom_offset(symbol("BugChargeChargeHeadMain"))
-    ]
-    verify(
-        b"\xE8\x6A\xE0\x62" in bugcharge_charge_spawn,
-        f"{label} BugCharge charge head inherits the private route marker",
-    )
     verify(folderback_code and any(byte != 0xFF for byte in folderback_code), f"{label} FolderBack code")
     for target in (
         0x080005CD, 0x08002379, 0x0800239B, 0x080033AD,
@@ -1064,11 +1090,6 @@ def verify_version(
     verify(b"\x8F\x20" in folderback_code, f"{label} FolderBack native FullCust SFX")
     verify(struct.pack("<I", 0x00004210) in folderback_code, f"{label} FolderBack pale flash color")
     verify(struct.pack("<I", 0x00006318) in folderback_code, f"{label} FolderBack white flash color")
-    verify(struct.pack("<I", 0x46424B36) in folderback_code, f"{label} FolderBack shared-slot tag")
-    verify(
-        struct.pack("<I", symbol("SignalRedBugChargeSharedMain") + 1) in folderback_code,
-        f"{label} FolderBack preserves SignalRed/BugCharge shared-slot route",
-    )
     death_code = output[rom_offset(symbol("DeathPhoenixCodeStart")):rom_offset(symbol("DeathPhoenixCodeEnd"))]
     verify(death_code and any(byte != 0xFF for byte in death_code), f"{label} DeathPhoenix code")
     for target in (
@@ -1157,8 +1178,6 @@ def verify_version(
         0x0801A141, 0x0801A4D1, 0x0801BBF5,
     ):
         verify(struct.pack("<I", target) in laser_code, f"{label} LaserMan runtime target 0x{target:08X}")
-    verify(struct.pack("<I", 0x4C415345) in laser_code, f"{label} LaserMan laser tag")
-    verify(struct.pack("<I", 0x4C484954) in laser_code, f"{label} LaserMan hit tag")
     verify(struct.pack("<I", 0x0800E277) not in laser_code, f"{label} no stale random-panel beam logic")
     command_streams = {
         "LaserManCommandNone": (0x00FD, 0x00FF),
@@ -1288,6 +1307,7 @@ def verify_version(
         ("BugChargeCodeStart", "BugChargeCodeEnd"),
         ("SignalRedCodeStart", "SignalRedCodeEnd"),
         ("FolderBackCodeStart", "FolderBackCodeEnd"),
+        ("ObjectTypesCodeStart", "ObjectTypesCodeEnd"),
         ("SignalRedSpawnAudioStart", "SignalRedSpawnAudioEnd"),
         ("RollArrowAudioStart", "RollArrowAudioEnd"),
         ("LaserManFireAudioStart", "LaserManFireAudioEnd"),
@@ -1347,18 +1367,17 @@ def verify_version(
 
     allowed_ranges = [
         interval(0x31CCC, 0x10),
-        interval(0x3DE8, 4),
         interval(ROLLARROW_RECORDS, 3 * 0x2C),
         interval(ANTINAVI_RECORD + 8, 1),
         interval(0x2CD64, 4), interval(0x3D5C, 4),
         interval(LASERMAN_RECORDS, 3 * 0x2C),
-        interval(0x2CD94, 4), interval(0x3D60, 4), interval(0x3F74, 4), interval(0x4324, 4),
+        interval(0x2CD94, 4), interval(0x3F74, 4),
         interval(SEARCHMAN_RECORDS, 3 * 0x2C),
-        interval(0x2CDB8, 4), interval(0x3DE0, 8), interval(0x3F78, 4), interval(0x44F8, 8),
+        interval(0x2CDB8, 4),
         interval(CHAOSLORD_RECORD, 0x2C),
         interval(0x2CCD0, 4), interval(0x4438, 4), interval(JEALOUSY_RECORD, 0x2C),
         interval(0x2CD3C, 4), interval(BUGCHAIN_RECORD, 0x2C),
-        interval(0x2CD4C, 4), interval(0x44D8, 4),
+        interval(0x2CD4C, 4),
         interval(SIGNALRED_RECORD, 0x2C), interval(BUGCHARGE_RECORD, 0x2C),
         interval(0x2CD40, 4), interval(0x3224, 4), interval(FOLDERBACK_RECORD, 0x2C),
         interval(0x12010, 8), interval(dust_suction_table_reference, 4),
@@ -1372,7 +1391,7 @@ def verify_version(
     )
     allowed_ranges.extend(interval(reference, 4) for reference in song_table_references)
     allowed_ranges.extend((
-        interval(0x2CDA0, 4), interval(0x3CA0, 4), interval(0x44CC, 8),
+        interval(0x2CDA0, 4),
         interval(DEATHPHOENIX_RECORD, 0x2C),
     ))
     for references in name_references + description_references:

@@ -272,14 +272,25 @@ def rebuild_title(
                     tile[source_y * 8 + source_x]
                 )
 
-    # Preserve the font rasterizer's exact silhouette and strokes. Only the
-    # face color changes by row, using a smooth native gold ramp without
-    # remapped texture or checkerboard dithering. This is intentionally drawn
-    # over the original 6; there is no foreground mask.
+    # Preserve the font rasterizer's exact silhouette and strokes. Its face
+    # uses the native gold ramp plus the original 6's lighting convention: a
+    # two-pixel light upper-left bevel and dark lower-right bevel. This is
+    # intentionally drawn over the original 6; there is no foreground mask.
     origin_x, origin_y = 191, 25
+    scaled_rows = tuple(
+        FONT_SEVEN[
+            y * (len(FONT_SEVEN) - 1) // (FONT_SEVEN_HEIGHT - 1)
+        ]
+        for y in range(FONT_SEVEN_HEIGHT)
+    )
+    face = {
+        (x, y)
+        for y, row in enumerate(scaled_rows)
+        for x, layer in enumerate(row)
+        if layer == "F"
+    }
     for y in range(FONT_SEVEN_HEIGHT):
-        source_y = y * (len(FONT_SEVEN) - 1) // (FONT_SEVEN_HEIGHT - 1)
-        row = FONT_SEVEN[source_y]
+        row = scaled_rows[y]
         gradient_index = y * (len(config.gradient) - 1) // (FONT_SEVEN_HEIGHT - 1)
         for x, layer in enumerate(row):
             if layer == "G":
@@ -287,7 +298,37 @@ def rebuild_title(
             elif layer == "B":
                 color = config.colors["black"]
             elif layer == "F":
-                color = config.gradient[gradient_index]
+                upper_left_1 = (x - 1, y) not in face or (x, y - 1) not in face
+                lower_right_1 = (x + 1, y) not in face or (x, y + 1) not in face
+                upper_left_2 = not upper_left_1 and (
+                    (x - 2, y) not in face
+                    or (x, y - 2) not in face
+                    or (x - 1, y - 1) not in face
+                )
+                lower_right_2 = not lower_right_1 and (
+                    (x + 2, y) not in face
+                    or (x, y + 2) not in face
+                    or (x + 1, y + 1) not in face
+                )
+                if upper_left_1:
+                    if y >= 42:
+                        color = config.colors["white"]
+                    elif y < 18:
+                        color = config.colors["cream"]
+                    else:
+                        color = config.colors["light"]
+                elif lower_right_1:
+                    color = config.colors[
+                        "orange_dark" if y < 18 else "brown"
+                    ]
+                elif upper_left_2:
+                    color = config.gradient[
+                        min(len(config.gradient) - 1, gradient_index + 2)
+                    ]
+                elif lower_right_2:
+                    color = config.gradient[max(0, gradient_index - 2)]
+                else:
+                    color = config.gradient[gradient_index]
             else:
                 continue
             canvas[(origin_y + y) * canvas_width + origin_x + x] = color

@@ -21,17 +21,9 @@
     .dw BugChainIcon,BugChainImage,BugChainPalette
 
 .definelabel BUGCHAIN_TIMEFREEZE_ENTRY,      0x0802CD3C // unused family 0x15, subfamily 0x22
-.definelabel TYPE4_BUGCHAIN_SHARED_ENTRY,    0x08004438 // shared with Jealousy's type-4 slot 0x5C
 .definelabel BUGCHAIN_SFX,                   0x01DF // exact Blue Moon SFX 0x015D
-.definelabel BUGCHAIN_TAG,                   0x48434742 // "BGCH"
-.definelabel BUGCHAIN_VISUAL_TAG,            0x56434742 // "BGCV"
 .org BUGCHAIN_TIMEFREEZE_ENTRY
 .dw BugChainTimeFreezeSpawn + 1
-
-// Jealousy already owns LifeSync's released type-4 slot. BugChain tags its
-// controller in the otherwise-unused object tail and shares the slot safely.
-.org TYPE4_BUGCHAIN_SHARED_ENTRY
-.dw BugChainSharedMain + 1
 
 .autoregion
 .align 4
@@ -40,7 +32,7 @@ BugChainCodeStart:
 BugChainTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x5C
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1-r3,r5}
@@ -54,25 +46,10 @@ BugChainTimeFreezeSpawn:
     strh r1,[r0,0x16]
     str r6,[r0,0x2C]
     str r7,[r0,0x30]
-    ldr r1,=BUGCHAIN_TAG
-    str r1,[r0,0x78]
+    mov r1,TYPE4_KIND_BUGCHAIN
+    str r1,[r0,CUSTOM_OBJECT_KIND]
 @@done:
     pop {pc}
-    .pool
-
-BugChainSharedMain:
-    ldr r0,[r5,0x78]
-    ldr r1,=BUGCHAIN_TAG
-    cmp r0,r1
-    beq BugChainMain
-    ldr r1,=BUGCHAIN_VISUAL_TAG
-    cmp r0,r1
-    bne @@jealousy
-    ldr r0,=BugChainVisualMain + 1
-    bx r0
-@@jealousy:
-    ldr r0,=JealousyMain + 1
-    bx r0
     .pool
 
 BugChainMain:
@@ -199,20 +176,19 @@ BugChainTransferBugs:
     .pool
 
 // Blue Moon attaches one 50-frame aura object to each player while the
-// controller's 60-frame transfer timer runs. It uses the same released type-4
-// slot as the controller and Jealousy, distinguished by a second private tag.
+// controller's 60-frame transfer timer runs. It uses a distinct hub kind.
 BugChainSpawnVisual:
     push {lr}
     push {r0,r5}
-    mov r0,0x5C
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1,r5}
     cmp r0,0
     beq @@done
     str r1,[r0,0x4C]
-    ldr r2,=BUGCHAIN_VISUAL_TAG
-    str r2,[r0,0x78]
+    mov r2,TYPE4_KIND_BUGCHAIN_VISUAL
+    str r2,[r0,CUSTOM_OBJECT_KIND]
 @@done:
     pop {pc}
     .pool

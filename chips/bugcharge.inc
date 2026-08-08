@@ -6,8 +6,6 @@
 .definelabel BUGCHARGE_ID,                    0x131
 .definelabel BUGCHARGE_SFX_CHARGE,            0x01E0 // exact BN5 SFX 0x0094
 .definelabel BUGCHARGE_SFX_FIRE,              0x01E1 // exact BN5 SFX 0x00FF
-.definelabel BUGCHARGE_CONTROLLER_TAG,        0x43434742 // "BGCC"
-.definelabel BUGCHARGE_CHARGE_HEAD_TAG,       0x4F434742 // "BGCO"
 .definelabel BUGCHARGE_ROUTE_MARKER,          0x8B // private; native BgDthThd uses 0x8A
 
 // B code, BN5 rarity/MB cost, Null element, Giga class, and 200 power.
@@ -43,7 +41,7 @@ BugChargeCodeStart:
 BugChargeTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x84
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1-r3,r5}
@@ -57,26 +55,10 @@ BugChargeTimeFreezeSpawn:
     strh r1,[r0,0x16]
     str r6,[r0,0x2C]
     str r7,[r0,0x30]
-    ldr r1,=BUGCHARGE_CONTROLLER_TAG
-    str r1,[r0,0x78]
+    mov r1,TYPE4_KIND_BUGCHARGE
+    str r1,[r0,CUSTOM_OBJECT_KIND]
 @@done:
     pop {pc}
-    .pool
-
-// The invisible controller and BN5 charge-head visual share the former
-// BugRSword type-4 slot with SignalRed and FolderBack. Gospel shots use
-// SearchMan's tagged type-3 hit slot so their collision follows BN6's native
-// counter-hit ownership path.
-BugChargeSharedMain:
-    ldr r0,[r5,0x78]
-    ldr r1,=BUGCHARGE_CHARGE_HEAD_TAG
-    cmp r0,r1
-    bne @@controller
-    ldr r1,=BugChargeChargeHeadMain + 1
-    bx r1
-@@controller:
-    ldr r1,=BugChargeControllerMain + 1
-    bx r1
     .pool
 
 BugChargeControllerMain:
@@ -266,7 +248,7 @@ BugChargeSpawnChargeHead:
     cmp r7,0
     beq @@done
     push {r5}
-    mov r0,0x84
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r4,r5
     pop {r5}
@@ -280,13 +262,8 @@ BugChargeSpawnChargeHead:
     ldrh r0,[r5,0x16]
     strh r0,[r4,0x16]
     str r7,[r4,0x4C]
-    // The shared slot routes replacement objects by the packed marker before
-    // consulting object-tail tags. Inherit the controller's private marker so
-    // this visual cannot fall into a native behavior through reused +0x2C.
-    ldr r0,[r5,0x2C]
-    str r0,[r4,0x2C]
-    ldr r0,=BUGCHARGE_CHARGE_HEAD_TAG
-    str r0,[r4,0x78]
+    mov r0,TYPE4_KIND_BUGCHARGE_HEAD
+    str r0,[r4,CUSTOM_OBJECT_KIND]
 @@done:
     pop {r4,r7,pc}
     .pool
@@ -386,7 +363,7 @@ BugChargeSpawnGospel:
     add r0,r0,r6                     // native shot begins on the front panel
     ldrb r1,[r5,0x13]
     push {r0-r1,r5}
-    mov r0,0x2C
+    mov r0,CUSTOM_TYPE3_ID
     mov r4,25
     EngineCall SPAWN_TYPE3
     mov r4,r5
@@ -400,8 +377,8 @@ BugChargeSpawnGospel:
     ldr r0,[r5,0x2C]
     str r0,[r4,0x2C]
     str r5,[r4,0x4C]
-    ldr r0,=BUGCHARGE_GOSPEL_TAG
-    str r0,[r4,0x78]
+    mov r0,TYPE3_KIND_BUGCHARGE_GOSPEL
+    str r0,[r4,CUSTOM_OBJECT_KIND]
     ldrb r0,[r4]
     mov r1,0x10
     orr r0,r1
@@ -442,7 +419,7 @@ BugChargeAttackRow:
 BugChargeHitSpawn:
     push {r0-r2,r4,r6,r7,lr}
     push {r5}
-    mov r0,0x2C
+    mov r0,CUSTOM_TYPE3_ID
     mov r4,25                         // BN6 normal attack collision region
     EngineCall SPAWN_TYPE3
     mov r4,r5
@@ -457,8 +434,8 @@ BugChargeHitSpawn:
     ldr r0,[r5,0x2C]
     str r0,[r4,0x2C]
     str r5,[r4,0x4C]
-    ldr r0,=BUGCHARGE_PROJECTILE_TAG
-    str r0,[r4,0x78]
+    mov r0,TYPE3_KIND_BUGCHARGE_HIT
+    str r0,[r4,CUSTOM_OBJECT_KIND]
     ldrb r0,[r4]
     mov r1,0x10
     orr r0,r1

@@ -21,8 +21,6 @@
     .dw FolderBackIcon,FolderBackImage,FolderBackPalette
 
 .definelabel FOLDERBACK_ATTACK_ENTRY,          0x0802CD40 // family 0x15, subfamily 0x23
-.definelabel TYPE4_FOLDERBACK_SHARED_ENTRY,    0x080044D8 // shared with SignalRed type-4 slot 0x84
-.definelabel FOLDERBACK_TAG,                   0x46424B36 // "FBK6"
 
 .definelabel FOLDERBACK_REBUILD_FOLDER,        0x0800A318
 .definelabel FOLDERBACK_CLEAR_HAND,            0x0800A954
@@ -42,12 +40,6 @@
 .org FOLDERBACK_ATTACK_ENTRY
 .dw FolderBackSpawn + 1
 
-// SignalRed and BugCharge already share type-4 slot 0x84. This include follows
-// both, so replace that entry with a tagged demultiplexer and tail-call their
-// shared dispatcher for every non-FolderBack object.
-.org TYPE4_FOLDERBACK_SHARED_ENTRY
-.dw FolderBackSharedMain + 1
-
 // Keep opposing actors in BN6's active-object list so the engine continues to
 // submit their sprites. All type-1 mains pass through a tagged FolderBack
 // guard which replaces only a locked actor's action callback with the native
@@ -62,7 +54,7 @@ FolderBackCodeStart:
 FolderBackSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x84
+    mov r0,CUSTOM_TYPE4_ID
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1-r3,r5}
@@ -83,19 +75,11 @@ FolderBackSpawn:
     str r1,[r0,0x6C]
     str r1,[r0,0x70]
     str r1,[r0,0x74]
-    ldr r1,=FOLDERBACK_TAG
     str r1,[r0,0x78]
+    mov r1,TYPE4_KIND_FOLDERBACK
+    str r1,[r0,CUSTOM_OBJECT_KIND]
 @@done:
     pop {pc}
-    .pool
-
-FolderBackSharedMain:
-    ldr r0,[r5,0x78]
-    ldr r1,=FOLDERBACK_TAG
-    cmp r0,r1
-    beq FolderBackMain
-    ldr r0,=SignalRedBugChargeSharedMain + 1
-    bx r0
     .pool
 
 FolderBackMain:
@@ -187,9 +171,11 @@ FolderBackType1Main:
     mov r1,1
     tst r0,r1
     beq @@next_object
-    ldr r0,[r6,0x78]
-    ldr r1,=FOLDERBACK_TAG
-    cmp r0,r1
+    ldrb r0,[r6,0x01]
+    cmp r0,CUSTOM_TYPE4_ID
+    bne @@next_object
+    ldr r0,[r6,CUSTOM_OBJECT_KIND]
+    cmp r0,TYPE4_KIND_FOLDERBACK
     bne @@next_object
 
     mov r4,0x60

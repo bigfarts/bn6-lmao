@@ -6,7 +6,8 @@
 
 The gold `6` in both title logos now reads `67`. The full-size `7` is rasterized
 from SF Pro Display Heavy Italic, extended slightly in height, recolored with
-each version's native title palette, and composited over the original `6`.
+each version's native title palette, given the original `6`'s upper-left/lower-
+right bevel lighting, and composited over the original `6`.
 Each edition's complete 256x160 title layer and uniform 32x20 tile map are
 rebuilt wholesale rather than patching individual native atlas cells.
 
