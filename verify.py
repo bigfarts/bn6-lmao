@@ -960,8 +960,16 @@ def verify_version(
     )
     verify(
         output[rom_offset(symbol("ChaosSetOutroTimer")):rom_offset(symbol("ChaosSetOutroTimer")) + 2]
-        == b"\x0B\x20",
-        f"{label} ChaosLrd exits inside BN6's stacked time-freeze scheduling window",
+        == b"\x28\x20",
+        f"{label} ChaosLrd preserves Bass's full native exit-animation hold",
+    )
+    verify(
+        output[
+            rom_offset(symbol("ChaosSetIntroTimer")):
+            rom_offset(symbol("ChaosSetIntroTimer")) + 2
+        ]
+        == b"\x71\x20",
+        f"{label} ChaosLrd reclaims BN6's shorter callback budget from its passive intro hold",
     )
     verify(jealousy_code and any(byte != 0xFF for byte in jealousy_code), f"{label} Jealousy code")
     verify(bugchain_code and any(byte != 0xFF for byte in bugchain_code), f"{label} BugChain code")

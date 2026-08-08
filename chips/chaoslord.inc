@@ -378,7 +378,11 @@ ChaosFinalizeCompletionRecord:
     bl ChaosSpawnAura
     pop {r1-r3}
 
-    mov r0,0x8E
+    // BN6 gives this time-freeze actor 29 fewer callbacks than BN5 did. Take
+    // those frames from the passive opening aura hold so Bass's animation
+    // 0x0F can retain its complete 40-frame fade and finish before cleanup.
+ChaosSetIntroTimer:
+    mov r0,0x71
     strh r0,[r5,0x20]
     EngineCall OBJECT_FRONT_DIRECTION
     ldr r1,=0x00009D89 // (32 << 16) / 52
@@ -716,12 +720,11 @@ ChaosPhase12:
     bpl ChaosPhase12Done
     mov r0,0x0F
     strb r0,[r5,0x10]
-    // BN6 stops updating a translated type-1 time-freeze actor after 396
-    // callbacks while a cut-in is stacked. The original 40-frame idle outro
-    // reaches destroy one callback too late; 11 is the longest hold that
-    // releases the completion record inside BN6's scheduling window.
+    // This is Bass's own final animation, not the separate teardown effect.
+    // Keep BN5's complete 40-frame hold; controller init reclaimed BN6's
+    // smaller callback budget from the passive opening aura instead.
 ChaosSetOutroTimer:
-    mov r0,0x0B
+    mov r0,0x28
     strh r0,[r5,0x20]
     mov r0,0x10
     strb r0,[r5,0x09]
