@@ -104,9 +104,9 @@ dd if="$BN5_ROM" of="$BUILD_DIR/chaoslord-teardown-sprite.bin" bs=1 skip=$((0x38
 dd if="$BN5_ROM" of="$BUILD_DIR/chaoslord-impact-sprite.bin" bs=1 skip=$((0x3906A8)) count=$((0x6B8)) 2>/dev/null
 dd if="$BN5_ROM" of="$BUILD_DIR/chaoslord-trig.bin" bs=1 skip=$((0x5CD0)) count=$((0x280)) 2>/dev/null
 
-# SignalRed replaces BugRSword in both versions. Its targetable traffic-light
-# archive is group 0x0C/index 0x33 in Blue Moon. Only Gregar points its chip
-# record at the imported menu art; Falzar deliberately retains BugRSword art.
+# SignalRed replaces Navi+20 in both versions. Its targetable traffic-light
+# archive is group 0x0C/index 0x33 in Blue Moon, and both versions use its
+# imported menu art now that it occupies a shared Standard-chip slot.
 dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/signalred-icon.bin" bs=1 skip=$((0x746EEC)) count=$((0x80)) 2>/dev/null
 dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/signalred-image.bin" bs=1 skip=$((0x73A8EC)) count=$((0x540)) 2>/dev/null
 dd if="$BN4_BLUE_MOON_ROM" of="$BUILD_DIR/signalred-palette.bin" bs=1 skip=$((0x73FAEC)) count=$((0x20)) 2>/dev/null
@@ -137,8 +137,8 @@ for version in gregar falzar; do
     dd if="$sprite_rom" of="$BUILD_DIR/sprite-group14-table-$version.bin" bs=1 skip=$((0x32114)) count=$((0x80)) 2>/dev/null
 done
 
-# BugCharge replaces BugFix while retaining its StandardChip class and library
-# slot. BugCharge is Colonel-exclusive, so source its real menu art from the
+# BugCharge replaces SignalRed in BugRSword's Gregar Giga slot, leaving BugFix
+# native. BugCharge is Colonel-exclusive, so source its real menu art from the
 # Team Colonel record. Group 0x0C/index 0x44 is the shared charge-orbit archive,
 # while group 0x10/index 0x13 is the Gospel head used by the actual shot.
 dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-icon.bin" bs=1 skip=$((0x74AE3C)) count=$((0x80)) 2>/dev/null

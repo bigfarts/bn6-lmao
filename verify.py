@@ -17,11 +17,12 @@ ROLLARROW_RECORDS = CHIP_DATA_OFFSET + 0x018 * 0x2C
 LASERMAN_RECORDS = CHIP_DATA_OFFSET + 0x0E3 * 0x2C
 SEARCHMAN_RECORDS = CHIP_DATA_OFFSET + 0x107 * 0x2C
 BUGCHAIN_RECORD = CHIP_DATA_OFFSET + 0x0BE * 0x2C
-BUGCHARGE_RECORD = CHIP_DATA_OFFSET + 0x0B0 * 0x2C
+BUGFIX_RECORD = CHIP_DATA_OFFSET + 0x0B0 * 0x2C
+SIGNALRED_RECORD = CHIP_DATA_OFFSET + 0x0C1 * 0x2C
 JEALOUSY_RECORD = CHIP_DATA_OFFSET + 0x0BF * 0x2C
 BASS_RECORD = CHIP_DATA_OFFSET + 0x12D * 0x2C
 CHAOSLORD_RECORD = CHIP_DATA_OFFSET + 0x12E * 0x2C
-SIGNALRED_RECORD = CHIP_DATA_OFFSET + 0x131 * 0x2C
+BUGCHARGE_RECORD = CHIP_DATA_OFFSET + 0x131 * 0x2C
 DEATHPHOENIX_RECORD = CHIP_DATA_OFFSET + 0x134 * 0x2C
 FOLDERBACK_RECORD = CHIP_DATA_OFFSET + 0x139 * 0x2C
 
@@ -110,7 +111,7 @@ def verify_version(
     name_references: tuple[tuple[int, ...], tuple[int, ...]],
     description_references: tuple[tuple[int, ...], tuple[int, ...]],
     replace_chaos_art: bool,
-    replace_signalred_art: bool,
+    replace_bugcharge_art: bool,
     jealousy_damage_object: int,
     replace_deathphoenix_art: bool,
     death_damage_object: int,
@@ -149,9 +150,7 @@ def verify_version(
         (0x2CCD0, "JealousyTimeFreezeSpawn"),
         (0x2CD3C, "BugChainTimeFreezeSpawn"),
         (0x4438, "BugChainSharedMain"),
-        (0x2CD1C, "BugChargeTimeFreezeSpawn"),
-        (0x43B4, "BugChargeSharedMain"),
-        (0x2CD4C, "SignalRedTimeFreezeSpawn"),
+        (0x2CD4C, "SignalRedBugChargeTimeFreezeDispatch"),
         (0x2CD40, "FolderBackSpawn"),
         (0x44D8, "FolderBackSharedMain"),
     ]
@@ -484,17 +483,31 @@ def verify_version(
         f"{label} complete BN6 BugFix byte-property list",
     )
 
+    verify(output[BUGFIX_RECORD:BUGFIX_RECORD + 0x2C] == original[BUGFIX_RECORD:BUGFIX_RECORD + 0x2C], f"{label} native BugFix record")
+    verify(output[0x2CD1C:0x2CD20] == original[0x2CD1C:0x2CD20], f"{label} native BugFix time-freeze dispatch")
+    verify(output[0x43B4:0x43B8] == original[0x43B4:0x43B8], f"{label} native BugFix type-4 dispatch")
+
     bugcharge_record = output[BUGCHARGE_RECORD:BUGCHARGE_RECORD + 0x2C]
     verify(bugcharge_record[:4] == b"\x01\xFF\xFF\xFF", f"{label} BN5 BugCharge B code")
-    verify(bugcharge_record[4:8] == b"\x00\x04\x0A\x00", f"{label} BugCharge rarity/element/Standard class")
-    verify(bugcharge_record[8:0x10] == b"\x4D\x43\x8A\x15\x1A\x01\x04\x00", f"{label} BugCharge MB/behavior")
-    verify(bugcharge_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\xB2\x00\x00", f"{label} BugCharge parameters")
-    verify(u16(bugcharge_record, 0x18) == 0x002E, f"{label} BugCharge alphabetical sort")
+    verify(bugcharge_record[4:8] == b"\x00\x04\x0A\x02", f"{label} BugCharge rarity/element/Giga class")
+    verify(
+        bugcharge_record[8:0x10]
+        == bytes((0x4D, 0x41 if replace_bugcharge_art else 0x01, 0x8A, 0x15, 0x26, 0x01, 0x04, 0x00)),
+        f"{label} BugCharge MB/behavior",
+    )
+    verify(bugcharge_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x05\x14\x00", f"{label} BugCharge parameters/library")
+    verify(u16(bugcharge_record, 0x18) == 0x0197, f"{label} BugCharge alphabetical sort")
     verify(u16(bugcharge_record, 0x1A) == 200, f"{label} BN5 BugCharge per-shot power")
-    verify(u16(bugcharge_record, 0x1C) == 0x00B2, f"{label} BugCharge Standard library position")
+    verify(u16(bugcharge_record, 0x1C) == 0x0131, f"{label} BugCharge Giga library position")
     verify(bugcharge_record[0x1E:0x20] == b"\x01\xFF", f"{label} BugCharge gate/dark ID")
-    for field, target in ((0x20, "BugChargeIcon"), (0x24, "BugChargeImage"), (0x28, "BugChargePalette")):
-        verify(u32(bugcharge_record, field) == symbol(target), f"{label} {target} record pointer")
+    if replace_bugcharge_art:
+        for field, target in ((0x20, "BugChargeIcon"), (0x24, "BugChargeImage"), (0x28, "BugChargePalette")):
+            verify(u32(bugcharge_record, field) == symbol(target), f"{label} {target} record pointer")
+    else:
+        verify(
+            bugcharge_record[0x20:0x2C] == original[BUGCHARGE_RECORD + 0x20:BUGCHARGE_RECORD + 0x2C],
+            f"{label} original Falzar BugRSword chip art",
+        )
     bugcharge_properties = rom_offset(symbol("BugChargeByteProperties"))
     verify(
         output[bugcharge_properties:bugcharge_properties + 7]
@@ -524,31 +537,25 @@ def verify_version(
 
     signalred_record = output[SIGNALRED_RECORD:SIGNALRED_RECORD + 0x2C]
     verify(signalred_record[:4] == b"\x12\xFF\xFF\xFF", f"{label} SignalRed code")
-    verify(signalred_record[4:8] == b"\x00\x04\x07\x02", f"{label} SignalRed rarity/element/class")
+    verify(signalred_record[4:8] == b"\x00\x04\x07\x00", f"{label} SignalRed rarity/element/Standard class")
     verify(
         signalred_record[8:0x10]
-        == bytes((0x3D, 0x41 if replace_signalred_art else 0x01, 0x00, 0x15, 0x26, 0x0A, 0x04, 0x00)),
+        == b"\x3D\x41\x00\x15\x26\x0A\x04\x00",
         f"{label} SignalRed MB/behavior",
     )
-    verify(signalred_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x05\x14\x00", f"{label} SignalRed parameters/library")
-    verify(u16(signalred_record, 0x18) == 0x0197, f"{label} SignalRed alphabetical sort")
+    verify(signalred_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x14\xC6\x40", f"{label} SignalRed parameters/library")
+    verify(u16(signalred_record, 0x18) == 0x0141, f"{label} SignalRed alphabetical sort")
     verify(u16(signalred_record, 0x1A) == 0, f"{label} SignalRed displayed power")
-    verify(u16(signalred_record, 0x1C) == 0x0131, f"{label} SignalRed library position")
+    verify(u16(signalred_record, 0x1C) == 0x00C6, f"{label} SignalRed Standard library position")
     verify(signalred_record[0x1E:0x20] == b"\x01\xFF", f"{label} SignalRed gate/dark ID")
-    if replace_signalred_art:
-        for field, target, source, length in (
-            (0x20, "SignalRedIcon", 0x746EEC, 0x80),
-            (0x24, "SignalRedImage", 0x73A8EC, 0x540),
-            (0x28, "SignalRedPalette", 0x73FAEC, 0x20),
-        ):
-            verify(u32(signalred_record, field) == symbol(target), f"{label} {target} record pointer")
-            start = rom_offset(symbol(target))
-            verify(output[start:start + length] == bn4[source:source + length], f"{label} {target}")
-    else:
-        verify(
-            signalred_record[0x20:0x2C] == original[SIGNALRED_RECORD + 0x20:SIGNALRED_RECORD + 0x2C],
-            f"{label} original Falzar BugRSword chip art",
-        )
+    for field, target, source, length in (
+        (0x20, "SignalRedIcon", 0x746EEC, 0x80),
+        (0x24, "SignalRedImage", 0x73A8EC, 0x540),
+        (0x28, "SignalRedPalette", 0x73FAEC, 0x20),
+    ):
+        verify(u32(signalred_record, field) == symbol(target), f"{label} {target} record pointer")
+        start = rom_offset(symbol(target))
+        verify(output[start:start + length] == bn4[source:source + length], f"{label} {target}")
 
     signalred_sprite = rom_offset(symbol("SignalRedBattleSprite"))
     verify(
@@ -891,8 +898,8 @@ def verify_version(
     verify(struct.pack("<I", 0x00006318) in folderback_code, f"{label} FolderBack white flash color")
     verify(struct.pack("<I", 0x46424B36) in folderback_code, f"{label} FolderBack shared-slot tag")
     verify(
-        struct.pack("<I", symbol("SignalRedTimeFreezeMain") + 1) in folderback_code,
-        f"{label} FolderBack preserves SignalRed shared-slot route",
+        struct.pack("<I", symbol("SignalRedBugChargeSharedMain") + 1) in folderback_code,
+        f"{label} FolderBack preserves SignalRed/BugCharge shared-slot route",
     )
     death_code = output[rom_offset(symbol("DeathPhoenixCodeStart")):rom_offset(symbol("DeathPhoenixCodeEnd"))]
     verify(death_code and any(byte != 0xFF for byte in death_code), f"{label} DeathPhoenix code")
@@ -1064,8 +1071,7 @@ def verify_version(
         allocated.append((symbol(name), symbol(name) + length, name))
     if replace_chaos_art:
         allocated.extend((symbol(name), symbol(name) + length, name) for name, length in (("ChaosLordIcon", 0x80), ("ChaosLordImage", 0x540), ("ChaosLordPalette", 0x20)))
-    if replace_signalred_art:
-        allocated.extend((symbol(name), symbol(name) + length, name) for name, length in (("SignalRedIcon", 0x80), ("SignalRedImage", 0x540), ("SignalRedPalette", 0x20)))
+    allocated.extend((symbol(name), symbol(name) + length, name) for name, length in (("SignalRedIcon", 0x80), ("SignalRedImage", 0x540), ("SignalRedPalette", 0x20)))
     if replace_deathphoenix_art:
         allocated.extend(
             (symbol(name), symbol(name) + length, name)
@@ -1099,9 +1105,8 @@ def verify_version(
         interval(CHAOSLORD_RECORD, 0x2C),
         interval(0x2CCD0, 4), interval(0x4438, 4), interval(JEALOUSY_RECORD, 0x2C),
         interval(0x2CD3C, 4), interval(BUGCHAIN_RECORD, 0x2C),
-        interval(0x2CD1C, 4), interval(0x43B4, 4), interval(BUGCHARGE_RECORD, 0x2C),
         interval(0x2CD4C, 4), interval(0x44D8, 4),
-        interval(SIGNALRED_RECORD, 0x2C),
+        interval(SIGNALRED_RECORD, 0x2C), interval(BUGCHARGE_RECORD, 0x2C),
         interval(0x2CD40, 4), interval(0x3224, 4), interval(FOLDERBACK_RECORD, 0x2C),
         interval(0x12010, 8), interval(dust_suction_table_reference, 4),
     ]

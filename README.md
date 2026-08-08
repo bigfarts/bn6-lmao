@@ -68,16 +68,24 @@ or weakening bugs already present on the target. Its icon, library art, and
 palette are imported from Blue Moon in both versions, along with the original
 50-frame bug aura and SFX `0x15D` displayed and played by both Navis.
 
-### SignalRed
+### BugCharg
 
-Replaces BugRSword with the complete Blue Moon SignalRed behavior. The 100-HP
+Replaces the former SignalRed/BugRSword slot with BN5 Colonel's BugCharge and
+restores BN6 BugFix. BugCharge is once again a GigaChip: the 77 MB,
+Null-element chip uses code B and fires one 200-damage Gospel shot plus one
+additional shot for every active battle-bug type it clears. Gregar uses the
+imported BugCharge menu art; Falzar retains the inaccessible BugRSword-slot
+art, matching the version-exclusive Giga slot.
+
+### SignlRed
+
+Replaces Navi+20 with the complete Blue Moon SignalRed behavior. The 100-HP
 traffic light appears on the panel in front of the user, disables the opposing
 side's BattleChip use for 420 red frames, opens a 50-frame green window, and
-repeats until destroyed. It is a 61 MB Obstacle-element GigaChip in code S.
-Both versions import the Blue Moon battle sprite; only Gregar replaces the
-BugRSword menu icon, library art, and palette, while Falzar keeps its original
-slot art. Its placement cue imports Blue Moon's original sample and sequence;
-the green-light cue uses its matching BN6 sound,
+repeats until destroyed. It is a 61 MB Obstacle-element StandardChip in code
+S and keeps Navi+20's library position. Both versions import the Blue Moon menu
+art and battle sprite. Its placement cue imports Blue Moon's original sample
+and sequence; the green-light cue uses its matching BN6 sound,
 and the light is registered as a normal deployable so DustCross can suck it in
 with B+Left.
 
@@ -105,9 +113,9 @@ center-cropped library art, palette, name, and description come from BN3 Blue.
 The build extracts RollArrow's three menu-art variants, Roll actor and
 heart-arrow archives, summon and firing samples, BugChain's menu art and aura,
 LaserMan's menu art and palettes,
-shared actor/beam archive, SignalRed's battle sprite, and Gregar-only SignalRed
-menu art from Blue Moon, Jealousy's menu/overlay graphics, FolderBack's BN3
-menu art and original rumble PCM, plus the full BN5
+shared actor/beam archive, and SignalRed's menu art and battle sprite from Blue
+Moon; Jealousy's menu/overlay graphics and BugCharge's menu, orbit, and Gospel
+assets from BN5; FolderBack's BN3 menu art and original rumble PCM; plus the full BN5
 SearchMan actor archive, both scope/reticle archives, the chip icon, and the
 56x48 library artwork. The SearchMan variant library-art palettes are:
 

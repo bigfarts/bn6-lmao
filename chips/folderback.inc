@@ -42,9 +42,9 @@
 .org FOLDERBACK_ATTACK_ENTRY
 .dw FolderBackSpawn + 1
 
-// SignalRed already owns type-4 slot 0x84. This include follows signalred.inc,
-// so replace that entry with a tagged demultiplexer and tail-call SignalRed
-// for every untagged object.
+// SignalRed and BugCharge already share type-4 slot 0x84. This include follows
+// both, so replace that entry with a tagged demultiplexer and tail-call their
+// shared dispatcher for every non-FolderBack object.
 .org TYPE4_FOLDERBACK_SHARED_ENTRY
 .dw FolderBackSharedMain + 1
 
@@ -94,7 +94,7 @@ FolderBackSharedMain:
     ldr r1,=FOLDERBACK_TAG
     cmp r0,r1
     beq FolderBackMain
-    ldr r0,=SignalRedTimeFreezeMain + 1
+    ldr r0,=SignalRedBugChargeSharedMain + 1
     bx r0
     .pool
 

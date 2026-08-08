@@ -197,6 +197,24 @@ DeathPhoenix replacements in those same final table images. The original
 tables remain untouched, so no later copy can discard or trample an earlier
 slot patch.
 
+## BugCharge and SignalRed slots
+
+BN6 BugFix remains native at chip ID `0x0B0`: neither its chip record nor its
+family-`0x15`/subfamily-`0x1A` and type-4 `0x3B` dispatch entries are patched.
+BugCharge instead occupies chip ID `0x131`, the Gregar-exclusive BugRSword Giga
+slot previously used by this patch's SignalRed port. It preserves that slot's
+Giga class, library position, version flag, and sort metadata while importing
+BN5's B code, 77 MB cost, Null element, and 200 per-shot power.
+
+SignalRed moves to Navi+20's Standard-chip ID `0x0C1`, retaining Navi+20's
+library position and sort metadata. Both imported chips select the former
+BugRSword family-`0x15`/subfamily-`0x26` route. The shared launcher checks
+record byte `0x0A` in packed attack word `r6`: BN5 BugCharge keeps marker
+`0x8A`, while SignalRed uses zero. Their type-4 controllers share slot `0x84`;
+BugCharge's controller and orbit tags select `BugChargeSharedMain`, while the
+untagged path selects `SignalRedTimeFreezeMain`. FolderBack's outer tagged
+dispatcher tail-calls this shared selector for every non-FolderBack object.
+
 ## SignalRed port
 
 Blue Moon SignalRed is chip ID `0x131`. Its family-`0x15`/subfamily-`0x26`
@@ -217,13 +235,13 @@ Blue Moon's green cue `0x15C` corresponds to BN6 sound `0x0D1` (the same
 sequence with BN6's native volume balance), rather than the unrelated
 same-numbered sounds.
 
-BugRSword occupies the same chip ID in BN6. The port retains its released
-family route and installs the translated controllers at these hooks:
+The port shares BugRSword's released family route between BugCharge and
+SignalRed and installs the translated controllers at these hooks:
 
 | Hook | BN6 file offset | Patched target |
 | --- | ---: | ---: |
-| family `0x15`, subfamily `0x26` | `0x02CD4C` | `SignalRedTimeFreezeSpawn` |
-| released type-4 slot `0x84` | `0x0044D8` | `SignalRedTimeFreezeMain` |
+| family `0x15`, subfamily `0x26` | `0x02CD4C` | `SignalRedBugChargeTimeFreezeDispatch` |
+| released type-4 slot `0x84` | `0x0044D8` | `FolderBackSharedMain` (then `SignalRedBugChargeSharedMain`) |
 
 The unified sprite installer assigns `SignalRedBattleSprite` to group `0x10`,
 index `0x1E` in the relocated table rather than modifying the old table at
@@ -268,9 +286,8 @@ The exact Blue Moon asset slices are:
 | menu palette | `0x73FAEC` | `0x20` |
 | traffic-light battle archive | `0x381C30` | `0x694` |
 
-Both versions use the imported battle archive. Gregar repoints BugRSword's
-three menu-art fields to the imported assets; Falzar preserves all three
-original pointers.
+Both versions use the imported battle archive and repoint Navi+20's three
+menu-art fields to the imported SignalRed assets.
 
 ## DeathPhoenix port
 

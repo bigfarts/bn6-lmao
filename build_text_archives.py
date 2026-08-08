@@ -58,9 +58,6 @@ CHIP_NAMES = {
     0x019: encode_name("RollAro2"),
     0x01A: encode_name("RollAro3"),
     0x0BE: encode_name("BugChain"),
-    # Verbatim BN5 English name. The source game and BN6 both allow eight
-    # visible characters, so the final "e" is intentionally absent.
-    0x0B0: encode_name("BugCharg"),
     0x0BF: encode_name("Jealousy"),
     0x0E3: encode_name("LaserMan"),
     0x0E4: encode_name("LaserMn[EX]"),
@@ -69,7 +66,10 @@ CHIP_NAMES = {
     0x108: encode_name("SerchMn[EX]"),
     0x109: encode_name("SerchMn[SP]"),
     0x12E: encode_name("ChaosLrd"),
-    0x131: encode_name("SignlRed"),
+    0x0C1: encode_name("SignlRed"),
+    # Verbatim BN5 English name. The source game and BN6 both allow eight
+    # visible characters, so the final "e" is intentionally absent.
+    0x131: encode_name("BugCharg"),
     0x134: encode_name("DethPhnx"),
     0x139: encode_name("FoldrBak"),
 }
@@ -80,8 +80,6 @@ CHIP_DESCRIPTIONS = {
     0x01A: encode_description("RollArrow", "destroys", "chips"),
     # Verbatim Blue Moon BugChain description (chip ID 0x0D3).
     0x0BE: encode_description("Fires", "bugs into", "enmy area"),
-    # Verbatim BN5 BugCharge description (chip ID 0x136).
-    0x0B0: encode_description("All your", "bugs will", "attack!"),
     0x0BF: encode_description("More dmg", "if enemy", "has chip"),
     0x0E3: encode_description("A laser", "pierces", "1 thru"),
     0x0E4: encode_description("A laser", "pierces", "1 thru"),
@@ -90,7 +88,9 @@ CHIP_DESCRIPTIONS = {
     0x108: SEARCHMAN_DESCRIPTION,
     0x109: SEARCHMAN_DESCRIPTION,
     0x12E: encode_description("Hatred", "formed", "into Bass"),
-    0x131: encode_description("Enmy chip", "is no use", "while red"),
+    0x0C1: encode_description("Enmy chip", "is no use", "while red"),
+    # Verbatim BN5 BugCharge description (chip ID 0x136).
+    0x131: encode_description("All your", "bugs will", "attack!"),
     0x134: encode_description("Fire Atk", "Recycle", "Navi too"),
     # Verbatim BN3 Blue FolderBack description (chip ID 0x12F).
     0x139: encode_description("Restores", "all chips", "& folders"),

@@ -1,36 +1,38 @@
 // ---------------------------------------------------------------------------
-// BugCharge replaces BugFix. This is BN5's bug-count version: it always fires
-// one 200-damage Gospel shot, adds one shot for each active BN5 battle-bug
-// type, then clears the bugs it consumed. The source chip is a GigaChip; this
-// port deliberately keeps BugFix's StandardChip class and library position.
+// BugCharge replaces the former SignalRed/BugRSword slot. This is BN5's
+// bug-count version: it always fires one 200-damage Gospel shot, adds one shot
+// for each active BN5 battle-bug type, then clears the bugs it consumed.
 
-.definelabel BUGCHARGE_ID,                    0x0B0
+.definelabel BUGCHARGE_ID,                    0x131
 .definelabel BUGCHARGE_SFX_CHARGE,            0x01E0 // exact BN5 SFX 0x0094
 .definelabel BUGCHARGE_SFX_FIRE,              0x01E1 // exact BN5 SFX 0x00FF
 .definelabel BUGCHARGE_CONTROLLER_TAG,        0x43434742 // "BGCC"
 .definelabel BUGCHARGE_ORBIT_TAG,             0x4F434742 // "BGCO"
 
-// B code, BN5 rarity/MB cost, Null element, Standard class, and 200 power.
-// Preserve BugFix's alphabetical sort value, library position, and normal-chip
-// gate byte while retaining its released BN6 time-freeze route.
+// B code, BN5 rarity/MB cost, Null element, Giga class, and 200 power. Preserve
+// BugRSword's alphabetical sort value, Giga library position, version-only
+// availability flag, and gate byte. BugCharge and SignalRed share the former
+// BugRSword family route; record byte 0x0A distinguishes their launchers.
 .org CHIP_DATA + BUGCHARGE_ID * 0x2C
     .db 0x01,0xFF,0xFF,0xFF             // B
-    .db 0x00,0x04,0x0A,0x00             // rarity 4, Null, Standard
-    .db 0x4D,0x43,0x8A,0x15
-    .db 0x1A,0x01,0x04,0x00             // released BugFix route
+    .db 0x00,0x04,0x0A,0x02             // rarity 4, Null, Giga
+    .db 0x4D
+.if FALZAR
+    .db 0x01
+.else
+    .db 0x41
+.endif
+    .db 0x8A,0x15
+    .db 0x26,0x01,0x04,0x00             // shared BugRSword route
     .db 0x00,0x00,0x00,0x00
-    .db 0x00,0xB2,0x00,0x00
-    .dh 0x002E,200,0x00B2
+    .db 0x00,0x05,0x14,0x00
+    .dh 0x0197,200,0x0131
     .db 0x01,0xFF
+.if FALZAR
+    .dw 0x0872C594,0x08721B34,0x087255B4
+.else
     .dw BugChargeIcon,BugChargeImage,BugChargePalette
-
-.definelabel BUGCHARGE_TIMEFREEZE_ENTRY,      0x0802CD1C // family 0x15, subfamily 0x1A
-.definelabel TYPE4_BUGCHARGE_ENTRY,            0x080043B4 // released BugFix type-4 slot 0x3B
-
-.org BUGCHARGE_TIMEFREEZE_ENTRY
-.dw BugChargeTimeFreezeSpawn + 1
-.org TYPE4_BUGCHARGE_ENTRY
-.dw BugChargeSharedMain + 1
+.endif
 
 .autoregion
 .align 4
@@ -39,7 +41,7 @@ BugChargeCodeStart:
 BugChargeTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r5}
-    mov r0,0x3B
+    mov r0,0x84
     EngineCall SPAWN_TYPE4
     mov r0,r5
     pop {r1-r3,r5}
@@ -59,9 +61,10 @@ BugChargeTimeFreezeSpawn:
     pop {pc}
     .pool
 
-// The invisible controller and the three BN5 orbit visuals share BugFix's
-// released type-4 slot. Gospel shots use SearchMan's tagged type-3 hit slot so
-// their collision follows BN6's native counter-hit ownership path.
+// The invisible controller and the three BN5 orbit visuals share the former
+// BugRSword type-4 slot with SignalRed and FolderBack. Gospel shots use
+// SearchMan's tagged type-3 hit slot so their collision follows BN6's native
+// counter-hit ownership path.
 BugChargeSharedMain:
     ldr r0,[r5,0x78]
     ldr r1,=BUGCHARGE_ORBIT_TAG
@@ -274,7 +277,7 @@ BugChargeSpawnOrbits:
 BugChargeSpawnOrbit:
     push {lr}
     push {r0,r5}
-    mov r0,0x3B
+    mov r0,0x84
     EngineCall SPAWN_TYPE4
     mov r4,r5
     pop {r0,r5}

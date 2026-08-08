@@ -1,37 +1,28 @@
 // ---------------------------------------------------------------------------
-// SignalRed replaces BugRSword. Blue Moon implements it as an invisible
+// SignalRed replaces Navi+20. Blue Moon implements it as an invisible
 // time-freeze launcher plus a separate 100-HP traffic light. While the light
 // is red it clears the opposing side's chip-enable bit; after 420 frames it
 // opens a 50-frame green window, then repeats until the object is destroyed.
 
-.definelabel SIGNALRED_ID,                  0x131
+.definelabel SIGNALRED_ID,                  0x0C1
 
-// Preserve BugRSword's BN6 family route, Giga library slot, and version-only
-// availability flag while importing SignalRed's S code, Obstacle element, 61 MB
-// cost, and zero behavior parameters from Blue Moon.
+// Preserve Navi+20's Standard library position, alphabetical sort metadata,
+// and gate byte while importing SignalRed's S code, Obstacle element, 61 MB
+// cost, and zero behavior parameters from Blue Moon. SignalRed shares the
+// former BugRSword family route with BugCharge; record byte 0x0A selects it.
 .org CHIP_DATA + SIGNALRED_ID * 0x2C
     .db 0x12,0xFF,0xFF,0xFF // S
-    .db 0x00,0x04,0x07,0x02
-    .db 0x3D
-.if FALZAR
-    .db 0x01
-.else
-    .db 0x41
-.endif
-    .db 0x00,0x15
+    .db 0x00,0x04,0x07,0x00
+    .db 0x3D,0x41,0x00,0x15
     .db 0x26,0x0A,0x04,0x00
     .db 0x00,0x00,0x00,0x00
-    .db 0x00,0x05,0x14,0x00
-    .dh 0x0197,0,0x0131
+    .db 0x00,0x14,0xC6,0x40
+    .dh 0x0141,0,0x00C6
     .db 0x01,0xFF
-.if FALZAR
-    .dw 0x0872C594,0x08721B34,0x087255B4
-.else
     .dw SignalRedIcon,SignalRedImage,SignalRedPalette
-.endif
 
-.definelabel SIGNALRED_TIMEFREEZE_ENTRY,    0x0802CD4C // family 0x15, subfamily 0x26
-.definelabel TYPE4_SIGNALRED_ENTRY,         0x080044D8 // BugRSword's released type-4 slot 0x84
+.definelabel SIGNALRED_TIMEFREEZE_ENTRY,    0x0802CD4C // shared family 0x15, subfamily 0x26
+.definelabel TYPE4_SIGNALRED_ENTRY,         0x080044D8 // shared type-4 slot 0x84
 .definelabel SIGNALRED_SFX_SPAWN,           0x01DA // relocated slot populated with Blue Moon SFX 0x00A0
 .definelabel SIGNALRED_SFX_GREEN,           0x00D1 // BN6 match for Blue Moon SFX 0x015C
 .definelabel DUST_FIRE_SPRITE_TABLE_PTR_0,  0x08012010
@@ -43,10 +34,10 @@
 .endif
 
 .org SIGNALRED_TIMEFREEZE_ENTRY
-.dw SignalRedTimeFreezeSpawn + 1
+.dw SignalRedBugChargeTimeFreezeDispatch + 1
 
 .org TYPE4_SIGNALRED_ENTRY
-.dw SignalRedTimeFreezeMain + 1
+.dw SignalRedBugChargeSharedMain + 1
 
 // DustCross stores a four-bit obstacle kind for each sucked object. Native
 // BN6 uses kinds 0-14; reserve kind 15 for SignalRed and redirect both the
@@ -69,8 +60,36 @@ SignalRedDustSpriteTable:
     .dh 0x0D04,0x0010,0x410C,0x0504,0x410C
     .dh 0x1E10
 
-// Retain BugRSword's released family route and type-4 ID. r6 is the attack
-// ID; r7 is the native time-freeze completion pointer.
+// Both imported chips use the former BugRSword route. The high half of packed
+// attack word r6 contains record byte 0x0A: BugCharge retains BN5's 0x8A
+// marker while SignalRed uses zero.
+SignalRedBugChargeTimeFreezeDispatch:
+    push {r0}
+    mov r0,r6
+    lsr r0,r0,16
+    cmp r0,0x8A
+    pop {r0}
+    bne SignalRedTimeFreezeSpawn
+    ldr r3,=BugChargeTimeFreezeSpawn + 1
+    bx r3
+    .pool
+
+// FolderBack installs the final slot hook after this include. Every untagged
+// controller is SignalRed; BugCharge tags both its controller and its orbits.
+SignalRedBugChargeSharedMain:
+    ldr r0,[r5,0x78]
+    ldr r1,=BUGCHARGE_CONTROLLER_TAG
+    cmp r0,r1
+    beq @@bugcharge
+    ldr r1,=BUGCHARGE_ORBIT_TAG
+    cmp r0,r1
+    bne SignalRedTimeFreezeMain
+@@bugcharge:
+    ldr r0,=BugChargeSharedMain + 1
+    bx r0
+    .pool
+
+// r6 is the attack ID; r7 is the native time-freeze completion pointer.
 SignalRedTimeFreezeSpawn:
     push {lr}
     push {r0-r2,r5}
@@ -451,28 +470,24 @@ SignalRedSpawnSample:
 SignalRedSpawnAudioEnd:
 .endautoregion
 
-// Both versions use Blue Moon's battle sprite. Only Gregar replaces the menu
-// icon/art/palette; Falzar retains BugRSword's original three pointers.
-.if FALZAR
-.else
-    .autoregion
-    .align 4
-    SignalRedIcon:
+// Both versions use Blue Moon's menu art and battle sprite.
+.autoregion
+.align 4
+SignalRedIcon:
     .incbin "build/signalred-icon.bin"
-    .endautoregion
+.endautoregion
 
-    .autoregion
-    .align 4
-    SignalRedImage:
+.autoregion
+.align 4
+SignalRedImage:
     .incbin "build/signalred-image.bin"
-    .endautoregion
+.endautoregion
 
-    .autoregion
-    .align 4
-    SignalRedPalette:
+.autoregion
+.align 4
+SignalRedPalette:
     .incbin "build/signalred-palette.bin"
-    .endautoregion
-.endif
+.endautoregion
 
 .autoregion
 .align 4

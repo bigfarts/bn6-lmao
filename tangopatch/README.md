@@ -57,14 +57,22 @@ battles it copies every active bug on the user to the opposing Navi without
 removing the user's bugs or weakening existing target bugs. Both versions use
 BugChain's Blue Moon icon, library art, palette, battle aura, and sound effect.
 
-## SignalRed
+## BugCharg
 
-Replaces BugRSword with Blue Moon SignalRed. The 100-HP traffic light spawns
+Replaces the former SignalRed/BugRSword slot with BN5 BugCharge and restores
+BN6 BugFix. BugCharge is a 77 MB, Null-element GigaChip in code B. It fires one
+200-damage Gospel shot plus one shot per active battle-bug type it clears.
+Gregar uses the imported BugCharge chip art; Falzar retains the inaccessible
+BugRSword-slot art.
+
+## SignlRed
+
+Replaces Navi+20 with Blue Moon SignalRed. The 100-HP traffic light spawns
 in front of the user, blocks the opponent's BattleChips for 420 red frames,
 then permits them during a 50-frame green window. It repeats this cycle until
-destroyed. SignalRed is a 61 MB Obstacle-element GigaChip in code S. Both
-versions use its Blue Moon battle sprite; only Gregar receives SignalRed chip
-art, while Falzar retains the original BugRSword chip art.
+destroyed. SignalRed is a 61 MB Obstacle-element StandardChip in code S and
+keeps Navi+20's library position. Both versions use its Blue Moon chip art and
+battle sprite.
 
 ## DethPhnx
 
