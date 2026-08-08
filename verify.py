@@ -8,6 +8,7 @@ import hashlib
 import struct
 from pathlib import Path
 
+from build_title_screen import CONFIGS as TITLE_CONFIGS, build as build_title_screen
 from build_text_archives import CHIP_DESCRIPTIONS, CHIP_NAMES, apply_changes
 from extract_folderback_art import extract as extract_folderback_art
 from reorder_chip_sort import (
@@ -140,10 +141,41 @@ def verify_version(
     verify(len(original) == 0x800000, f"{label} original size")
     verify(len(output) == 0x1000000, f"{label} output size")
 
+    title_config = TITLE_CONFIGS[label.lower()]
+    expected_title, title_used, expected_title_map = build_title_screen(
+        original, label.lower()
+    )
+    title_start = title_config.stream_offset
+    title_finish = title_start + title_config.encoded_capacity
+    verify(
+        output[title_start:title_finish] == expected_title,
+        f"{label} title screen reads 67",
+    )
+    verify(
+        title_used <= title_config.encoded_capacity,
+        f"{label} title screen remains inside native compressed slot",
+    )
+
     def symbol(name: str) -> int:
         key = name.lower()
         verify(key in symbols, f"{label} symbol {name}")
         return symbols[key]
+
+    title_map_start = symbol("TitleScreenMap")
+    title_map_finish = symbol("TitleScreenMapEnd")
+    verify(
+        u32(output, 0x2FD50) == title_map_start,
+        f"{label} wholesale title map pointer",
+    )
+    verify(
+        title_map_finish - title_map_start == len(expected_title_map),
+        f"{label} wholesale title map size",
+    )
+    verify(
+        output[rom_offset(title_map_start) : rom_offset(title_map_finish)]
+        == expected_title_map,
+        f"{label} wholesale title map contents",
+    )
 
     # Runtime dispatches use labels selected by Armips, never fixed expanded
     # ROM offsets.
@@ -1302,6 +1334,7 @@ def verify_version(
         )
     allocated.append((symbol("DeathPhoenixBattleSprite"), symbol("DeathPhoenixBattleSprite") + 0x20F4, "DeathPhoenixBattleSprite"))
     allocated.append((symbol("DeathPhoenixStrikeSprite"), symbol("DeathPhoenixStrikeSprite") + 0x748, "DeathPhoenixStrikeSprite"))
+    allocated.append((symbol("TitleScreenMap"), symbol("TitleScreenMapEnd"), "TitleScreenMap"))
     for name in archive_symbols[0] + archive_symbols[1]:
         start = symbol(name)
         allocated.append((start, start + archive_extent(output, rom_offset(start)), name))
@@ -1329,6 +1362,8 @@ def verify_version(
         interval(SIGNALRED_RECORD, 0x2C), interval(BUGCHARGE_RECORD, 0x2C),
         interval(0x2CD40, 4), interval(0x3224, 4), interval(FOLDERBACK_RECORD, 0x2C),
         interval(0x12010, 8), interval(dust_suction_table_reference, 4),
+        interval(0x2FD50, 4),
+        interval(title_start, title_config.encoded_capacity),
     ]
     allowed_ranges.append(interval(0x120116 if label == "Falzar" else 0x121EF2, 2))
     allowed_ranges.extend(

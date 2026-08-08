@@ -1,5 +1,6 @@
 .include "common.inc"
 .defineregion 0x08800000,0x00800000,0xFF
+.include "title_screen.inc"
 .include "chips/antinavi.inc"
 .include "chips/chaoslord.inc"
 .include "chips/rollarrow.inc"

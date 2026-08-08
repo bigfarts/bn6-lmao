@@ -2,6 +2,14 @@
 
 ## Changes
 
+### Title screen
+
+The gold `6` in both title logos now reads `67`. The full-size `7` is rasterized
+from SF Pro Display Heavy Italic, extended slightly in height, recolored with
+each version's native title palette, and composited over the original `6`.
+Each edition's complete 256x160 title layer and uniform 32x20 tile map are
+rebuilt wholesale rather than patching individual native atlas cells.
+
 ### AntiNavi
 
 AntiNavi retains its native BN6 behavior, codes, and metadata, but its MB cost
@@ -175,7 +183,7 @@ Supported source SHA-256 hashes:
 
 Patched ROM copies are written under `build/`. If `flips` is available, BPS
 patches are written under `dist/`. If `tango-patch` is also available, the two
-BPS payloads are packaged together as `bn6_lmao-1.0.0.tangopatch`. The
+BPS payloads are packaged together as `bn67-1.0.0.tangopatch`. The
 supplied source ROMs are never modified.
 
 As a final build step, every nonzero alphabetical-sort key in the main chip

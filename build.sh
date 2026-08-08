@@ -52,6 +52,17 @@ check_sha256 "$BN3_BLUE_ROM" 8c6767788f99dc9e2af0c9d75513b227c7c42d6d452d6165c8e
 
 mkdir -p "$BUILD_DIR" "$DIST_DIR"
 
+# Rebuild each complete 256x160 title layer and its uniform 32x20 tile map,
+# with the full-height font-rasterized 7 composited over the native artwork.
+# The two editions retain their own artwork and palettes, but no longer rely
+# on their different native atlas layouts.
+python3 "$PATCH_DIR/build_title_screen.py" \
+    gregar "$BN6_GREGAR_ROM" "$BUILD_DIR/title-67-gregar.bin" \
+    "$BUILD_DIR/title-map-gregar.bin"
+python3 "$PATCH_DIR/build_title_screen.py" \
+    falzar "$BN6_FALZAR_ROM" "$BUILD_DIR/title-67-falzar.bin" \
+    "$BUILD_DIR/title-map-falzar.bin"
+
 # FolderBack replaces BN6's dormant Falzar Giga slot. BN3 uses a 64x56 chip
 # image while BN6 expects 56x48, so crop the original image by four pixels on
 # every edge and preserve its native icon and palette exactly.
@@ -191,8 +202,8 @@ python3 "$PATCH_DIR/build_text_archives.py" \
     "$BUILD_DIR/chip-names-0-falzar.bin" "$BUILD_DIR/chip-names-1-falzar.bin" \
     "$BUILD_DIR/chip-descriptions-0-falzar.bin" "$BUILD_DIR/chip-descriptions-1-falzar.bin"
 
-cp "$BN6_GREGAR_ROM" "$BUILD_DIR/exe6_rom_e_lmao.srl"
-cp "$BN6_FALZAR_ROM" "$BUILD_DIR/exe6f_rom_f_e_lmao.srl"
+cp "$BN6_GREGAR_ROM" "$BUILD_DIR/exe6_rom_e.patched.srl"
+cp "$BN6_FALZAR_ROM" "$BUILD_DIR/exe6f_rom_f_e.patched.srl"
 
 cp "$BUILD_DIR/chip-names-0-gregar.bin" "$BUILD_DIR/chip-names-0.bin"
 cp "$BUILD_DIR/chip-names-1-gregar.bin" "$BUILD_DIR/chip-names-1.bin"
@@ -205,7 +216,7 @@ cp "$BUILD_DIR/sprite-group10-table-gregar.bin" "$BUILD_DIR/sprite-group10-table
 cp "$BUILD_DIR/sprite-group14-table-gregar.bin" "$BUILD_DIR/sprite-group14-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/gregar.sym" gregar.asm
 python3 "$PATCH_DIR/reorder_chip_sort.py" \
-    "$BUILD_DIR/exe6_rom_e_lmao.srl" "$BUILD_DIR/gregar.sym" "$BN6_GREGAR_ROM"
+    "$BUILD_DIR/exe6_rom_e.patched.srl" "$BUILD_DIR/gregar.sym" "$BN6_GREGAR_ROM"
 cp "$BUILD_DIR/chip-names-0-falzar.bin" "$BUILD_DIR/chip-names-0.bin"
 cp "$BUILD_DIR/chip-names-1-falzar.bin" "$BUILD_DIR/chip-names-1.bin"
 cp "$BUILD_DIR/chip-descriptions-0-falzar.bin" "$BUILD_DIR/chip-descriptions-0.bin"
@@ -217,22 +228,22 @@ cp "$BUILD_DIR/sprite-group10-table-falzar.bin" "$BUILD_DIR/sprite-group10-table
 cp "$BUILD_DIR/sprite-group14-table-falzar.bin" "$BUILD_DIR/sprite-group14-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/falzar.sym" falzar.asm
 python3 "$PATCH_DIR/reorder_chip_sort.py" \
-    "$BUILD_DIR/exe6f_rom_f_e_lmao.srl" "$BUILD_DIR/falzar.sym" "$BN6_FALZAR_ROM"
+    "$BUILD_DIR/exe6f_rom_f_e.patched.srl" "$BUILD_DIR/falzar.sym" "$BN6_FALZAR_ROM"
 
 python3 "$PATCH_DIR/verify.py" \
     "$BN5_ROM" "$BN5_COLONEL_ROM" "$BN4_BLUE_MOON_ROM" "$BN3_BLUE_ROM" \
-    "$BN6_GREGAR_ROM" "$BUILD_DIR/exe6_rom_e_lmao.srl" "$BUILD_DIR/gregar.sym" \
-    "$BN6_FALZAR_ROM" "$BUILD_DIR/exe6f_rom_f_e_lmao.srl" "$BUILD_DIR/falzar.sym"
+    "$BN6_GREGAR_ROM" "$BUILD_DIR/exe6_rom_e.patched.srl" "$BUILD_DIR/gregar.sym" \
+    "$BN6_FALZAR_ROM" "$BUILD_DIR/exe6f_rom_f_e.patched.srl" "$BUILD_DIR/falzar.sym"
 
 if [ -n "$FLIPS_BIN" ]; then
-    "$FLIPS_BIN" --create --bps "$BN6_GREGAR_ROM" "$BUILD_DIR/exe6_rom_e_lmao.srl" "$DIST_DIR/bn6-gregar-lmao.bps"
-    "$FLIPS_BIN" --create --bps "$BN6_FALZAR_ROM" "$BUILD_DIR/exe6f_rom_f_e_lmao.srl" "$DIST_DIR/bn6-falzar-lmao.bps"
+    "$FLIPS_BIN" --create --bps "$BN6_GREGAR_ROM" "$BUILD_DIR/exe6_rom_e.patched.srl" "$DIST_DIR/bn67-gregar.bps"
+    "$FLIPS_BIN" --create --bps "$BN6_FALZAR_ROM" "$BUILD_DIR/exe6f_rom_f_e.patched.srl" "$DIST_DIR/bn67-falzar.bps"
     echo "BPS patches written to $DIST_DIR"
 
     if [ -n "$TANGO_PATCH_BIN" ]; then
         mkdir -p "$TANGOPATCH_SRC/roms"
-        cp "$DIST_DIR/bn6-gregar-lmao.bps" "$TANGOPATCH_SRC/roms/BR5E_00.bps"
-        cp "$DIST_DIR/bn6-falzar-lmao.bps" "$TANGOPATCH_SRC/roms/BR6E_00.bps"
+        cp "$DIST_DIR/bn67-gregar.bps" "$TANGOPATCH_SRC/roms/BR5E_00.bps"
+        cp "$DIST_DIR/bn67-falzar.bps" "$TANGOPATCH_SRC/roms/BR6E_00.bps"
         "$TANGO_PATCH_BIN" validate "$TANGOPATCH_SRC"
         "$TANGO_PATCH_BIN" pack --out "$DIST_DIR" "$TANGOPATCH_SRC"
     else
