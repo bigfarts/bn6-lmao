@@ -248,9 +248,8 @@ pixels forward of the user at Z `0x17`. BN5's object code gives this visual a
 fixed 60-tick active state and a 30-tick teardown, so with a high bug count the
 apparition can disappear before the controller finishes launching heads. The
 port instead assigns `55 + 15 * shot_count` to its hold timer, matching the
-controller's 40-frame charge, 15-frame shot cadence, and 30-frame recovery,
-then applies a 16-frame blend fade before freeing the object. The moving object
-begins on the front panel at Z `0x14`, advances 10 pixels per
+controller's 40-frame charge, 15-frame shot cadence, and 30-frame recovery.
+The moving object begins on the front panel at Z `0x14`, advances 10 pixels per
 frame, and changes its collision panel at the midpoint between panel centers.
 The translated counter consumes BN5's nine property types plus BN6 field
 `0x63`; after clearing it calls BugFix's native `0x0801E658` runtime-state reset

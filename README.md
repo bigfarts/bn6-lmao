@@ -76,10 +76,10 @@ Null-element chip uses code B and fires one 200-damage Gospel shot plus one
 additional shot for every active battle-bug type it clears. It consumes the
 complete BN6 BugFix property set, including the Custom-screen bug, and resets
 BugFix's latched runtime bug state. The stationary Gospel uses BN5's 24-pixel
-forward offset, remains present through the full bug-scaled firing sequence,
-and fades out afterward; each moving head begins on the front panel with BN5's
-native collision timing. Gregar uses the imported BugCharge menu art; Falzar
-retains the inaccessible BugRSword-slot art.
+forward offset and remains present through the full bug-scaled firing sequence;
+each moving head begins on the front panel with BN5's native collision timing.
+Gregar uses the imported BugCharge menu art; Falzar retains the inaccessible
+BugRSword-slot art.
 
 ### SignlRed
 

@@ -256,8 +256,7 @@ BugChargePlayFireSound:
 // user when charging begins. BN5 gives that object a fixed lifetime, which can
 // expire before a high-bug shot sequence finishes. Keep the native position
 // and animation, but derive this port's lifetime from the controller's shot
-// count so it remains visible through the final shot and 30-frame recovery,
-// then run a separate 16-frame blend fade before freeing it.
+// count so it remains visible through the final shot and 30-frame recovery.
 BugChargeSpawnChargeHead:
     push {r4,r7,lr}
     ldrb r0,[r5,0x16]
@@ -338,30 +337,13 @@ BugChargeChargeHeadUpdate:
     ldr r0,[r5,0x4C]
     cmp r0,0
     beq @@free
-    ldrb r0,[r5,0x0A]
-    cmp r0,4
-    beq @@fade
-    ldrh r0,[r5,0x22]
-    sub r0,1
-    strh r0,[r5,0x22]
-    blt @@begin_fade
-    bl BugChargeChargeHeadSetPosition
-    pop {pc}
-@@begin_fade:
-    mov r0,16
-    strh r0,[r5,0x22]
-    mov r0,4
-    strb r0,[r5,0x0A]
-@@fade:
     ldrh r0,[r5,0x22]
     sub r0,1
     strh r0,[r5,0x22]
     blt @@free
-    EngineCall SPRITE_SET_BLEND_MODE
     bl BugChargeChargeHeadSetPosition
     pop {pc}
 @@free:
-    EngineCall SPRITE_PROPERTY_2CCE
     EngineCall OBJECT_FREE
     pop {pc}
 
