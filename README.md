@@ -157,6 +157,12 @@ patches are written under `dist/`. If `tango-patch` is also available, the two
 BPS payloads are packaged together as `bn6_lmao-1.0.0.tangopatch`. The
 supplied source ROMs are never modified.
 
+As a final build step, every nonzero alphabetical-sort key in the main chip
+table is regenerated from the completed relocated name archives. The pass uses
+case-insensitive natural ordering, so renamed chips and numbered or EX/SP
+series appear in name order in both Gregar and Falzar. Zero-keyed special,
+enemy, and unused records remain untouched.
+
 ## Text archives
 
 BN6 splits chip names and descriptions into an earlier 256-entry archive for

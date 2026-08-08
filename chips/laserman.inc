@@ -5,8 +5,9 @@
 
 .definelabel LASERMAN_ID,                    0xE3
 
-// Preserve HeatMan's version-specific alphabetical/library ordering fields at
-// +0x14..+0x19 and +0x1C..+0x1F. Replace every gameplay and art field.
+// Preserve HeatMan's version-specific reserved and library-ordering fields at
+// +0x14..+0x17 and +0x1C..+0x1F. The final ROM pass replaces the inherited
+// alphabetical-sort key at +0x18 from the new names.
 .org CHIP_DATA + (LASERMAN_ID + 0) * 0x2C
     .db 0x0B,0x1A,0xFF,0xFF             // L and *
     .db 0x00,0x02,0x0A,0x01             // rarity 2, Null, Mega

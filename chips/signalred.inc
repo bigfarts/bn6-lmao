@@ -6,10 +6,11 @@
 
 .definelabel SIGNALRED_ID,                  0x0C1
 
-// Preserve Navi+20's Standard library position, alphabetical sort metadata,
-// and gate byte while importing SignalRed's S code, Obstacle element, 61 MB
-// cost, and zero behavior parameters from Blue Moon. SignalRed shares the
-// former BugRSword family route with BugCharge; record byte 0x0A selects it.
+// Preserve Navi+20's Standard library position and gate byte while importing
+// SignalRed's S code, Obstacle element, 61 MB cost, and zero behavior
+// parameters from Blue Moon. The final ROM pass replaces its sort key.
+// SignalRed shares the former BugRSword family route with BugCharge; record
+// byte 0x0A selects it.
 .org CHIP_DATA + SIGNALRED_ID * 0x2C
     .db 0x12,0xFF,0xFF,0xFF // S
     .db 0x00,0x04,0x07,0x00

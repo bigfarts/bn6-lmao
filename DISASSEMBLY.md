@@ -203,14 +203,14 @@ BN6 BugFix remains native at chip ID `0x0B0`: neither its chip record nor its
 family-`0x15`/subfamily-`0x1A` and type-4 `0x3B` dispatch entries are patched.
 BugCharge instead occupies chip ID `0x131`, the Gregar-exclusive BugRSword Giga
 slot previously used by this patch's SignalRed port. It preserves that slot's
-Giga class, library position, version flag, and sort metadata while importing
-BN5's B code, 77 MB cost, Null element, and 200 per-shot power.
+Giga class, library position, and version flag while importing BN5's B code,
+77 MB cost, Null element, and 200 per-shot power.
 
 SignalRed moves to Navi+20's Standard-chip ID `0x0C1`, retaining Navi+20's
-library position and sort metadata. Both imported chips select the former
-BugRSword family-`0x15`/subfamily-`0x26` route. The shared launcher checks
-record byte `0x0A` in packed attack word `r6`: BN5 BugCharge keeps marker
-`0x8A`, while SignalRed uses zero. Their type-4 controllers share slot `0x84`;
+library position. Both imported chips select the former BugRSword
+family-`0x15`/subfamily-`0x26` route. The shared launcher checks record byte
+`0x0A` in packed attack word `r6`: BN5 BugCharge keeps marker `0x8A`, while
+SignalRed uses zero. Their type-4 controllers share slot `0x84`;
 BugCharge's controller and orbit tags select `BugChargeSharedMain`, while the
 untagged path selects `SignalRedTimeFreezeMain`. FolderBack's outer tagged
 dispatcher tail-calls this shared selector for every non-FolderBack object.
@@ -478,7 +478,8 @@ variant background to palette indices `1`-`5`, so EX replaces only those five
 entries with green shades and retains the base foreground at indices `6`-`15`.
 SP uses the native yellow-background palette. The in-battle actor always
 selects palette 0. Base is available in `L` and `*`, while EX and SP remain
-`L`-only. HeatMan's version-specific alphabetical and library-order metadata
-remains byte-for-byte intact in both Gregar and Falzar. The relocated sound
+`L`-only. HeatMan's version-specific library-order metadata remains intact in
+both Gregar and Falzar; the final ROM pass regenerates alphabetical keys for
+the complete sortable chip table from the relocated names. The relocated sound
 table reuses imported BN4 summon SFX `0xB0` and adds the exact BN4 SFX `0x103`
 track, voicegroup, and PCM sample for the firing cue.

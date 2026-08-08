@@ -211,6 +211,8 @@ cp "$BUILD_DIR/sprite-group0C-table-gregar.bin" "$BUILD_DIR/sprite-group0C-table
 cp "$BUILD_DIR/sprite-group10-table-gregar.bin" "$BUILD_DIR/sprite-group10-table.bin"
 cp "$BUILD_DIR/sprite-group14-table-gregar.bin" "$BUILD_DIR/sprite-group14-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/gregar.sym" gregar.asm
+python3 "$PATCH_DIR/reorder_chip_sort.py" \
+    "$BUILD_DIR/exe6_rom_e_lmao.srl" "$BUILD_DIR/gregar.sym"
 cp "$BUILD_DIR/chip-names-0-falzar.bin" "$BUILD_DIR/chip-names-0.bin"
 cp "$BUILD_DIR/chip-names-1-falzar.bin" "$BUILD_DIR/chip-names-1.bin"
 cp "$BUILD_DIR/chip-descriptions-0-falzar.bin" "$BUILD_DIR/chip-descriptions-0.bin"
@@ -221,6 +223,8 @@ cp "$BUILD_DIR/sprite-group0C-table-falzar.bin" "$BUILD_DIR/sprite-group0C-table
 cp "$BUILD_DIR/sprite-group10-table-falzar.bin" "$BUILD_DIR/sprite-group10-table.bin"
 cp "$BUILD_DIR/sprite-group14-table-falzar.bin" "$BUILD_DIR/sprite-group14-table.bin"
 "$ARMIPS_BIN" -root "$PATCH_DIR" -erroronwarning -sym "$BUILD_DIR/falzar.sym" falzar.asm
+python3 "$PATCH_DIR/reorder_chip_sort.py" \
+    "$BUILD_DIR/exe6f_rom_f_e_lmao.srl" "$BUILD_DIR/falzar.sym"
 
 python3 "$PATCH_DIR/verify.py" \
     "$BN5_ROM" "$BN5_COLONEL_ROM" "$BN4_BLUE_MOON_ROM" "$BN3_BLUE_ROM" \

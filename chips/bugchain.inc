@@ -6,8 +6,9 @@
 
 .definelabel BUGCHAIN_ID,                    0x0BE
 
-// Preserve CopyDamage's Standard-chip library position and sort metadata while
-// importing BugChain's C/* codes, rarity, 59 MB cost, and support-chip power.
+// Preserve CopyDamage's Standard-chip library position while importing
+// BugChain's C/* codes, rarity, 59 MB cost, and support-chip power. The final
+// ROM pass replaces the inherited alphabetical-sort key from the new name.
 .org CHIP_DATA + BUGCHAIN_ID * 0x2C
     .db 0x02,0x1A,0xFF,0xFF // C, *
     .db 0x00,0x03,0x0A,0x00

@@ -10,9 +10,15 @@ from pathlib import Path
 
 from build_text_archives import CHIP_DESCRIPTIONS, CHIP_NAMES, apply_changes
 from extract_folderback_art import extract as extract_folderback_art
+from reorder_chip_sort import (
+    CHIP_DATA_OFFSET,
+    CHIP_RECORD_COUNT,
+    CHIP_RECORD_SIZE,
+    CHIP_SORT_OFFSET,
+    alphabetical_sort_values,
+)
 
 
-CHIP_DATA_OFFSET = 0x21DA8
 ROLLARROW_RECORDS = CHIP_DATA_OFFSET + 0x018 * 0x2C
 LASERMAN_RECORDS = CHIP_DATA_OFFSET + 0x0E3 * 0x2C
 SEARCHMAN_RECORDS = CHIP_DATA_OFFSET + 0x107 * 0x2C
@@ -292,6 +298,16 @@ def verify_version(
             expected = CHIP_DESCRIPTIONS.get(chip_id, old_entry)
             verify(new_entry == expected, f"{label} description entry 0x{chip_id:X}")
 
+    installed_names = [entry for archive in installed_archives for entry in archive]
+    expected_sorts = alphabetical_sort_values(original, installed_names)
+    for chip_id in range(CHIP_RECORD_COUNT):
+        record = CHIP_DATA_OFFSET + chip_id * CHIP_RECORD_SIZE
+        expected = expected_sorts.get(chip_id, 0)
+        verify(
+            u16(output, record + CHIP_SORT_OFFSET) == expected,
+            f"{label} chip 0x{chip_id:03X} final alphabetical sort",
+        )
+
     for old_offset in original_name_offsets + original_description_offsets:
         old_pointer = struct.pack("<I", old_offset + 0x08000000)
         verify(old_pointer not in output[:0x800000], f"{label} stale text pointer 0x{old_offset + 0x08000000:08X}")
@@ -318,7 +334,7 @@ def verify_version(
         verify(record[4:8] == bytes((0, roll_rarities[index], 0x0A, 0)), f"{label} RollArrow {index + 1} rank/type")
         verify(record[8:0x10] == bytes((roll_mb[index], 0x43, 0x94, 0x1B, 0x0E, 0x0A, 0x04, 0)), f"{label} RollArrow {index + 1} behavior")
         verify(record[0x10:0x18] == bytes((0, 0, 0, 0, 0, 0x17 + index, 0, 0x0A)), f"{label} RollArrow {index + 1} parameters")
-        verify(u16(record, 0x18) == 0x01BC + index, f"{label} RollArrow {index + 1} alphabetical sort")
+        verify(u16(record, 0x18) == expected_sorts[0x018 + index], f"{label} RollArrow {index + 1} alphabetical sort")
         verify(u16(record, 0x1A) == roll_powers[index], f"{label} RollArrow {index + 1} power")
         verify(u16(record, 0x1C) == 0x17 + index, f"{label} RollArrow {index + 1} library position")
         verify(record[0x1E:0x20] == b"\x01\xFF", f"{label} RollArrow {index + 1} gate/dark ID")
@@ -346,7 +362,8 @@ def verify_version(
             f"{label} LaserMan {index} behavior route",
         )
         verify(u32(record, 0x10) == laserman_params[index], f"{label} LaserMan {index} variant")
-        verify(record[0x14:0x1A] == original_record[0x14:0x1A], f"{label} LaserMan {index} sort metadata")
+        verify(record[0x14:0x18] == original_record[0x14:0x18], f"{label} LaserMan {index} reserved metadata")
+        verify(u16(record, 0x18) == expected_sorts[0x0E3 + index], f"{label} LaserMan {index} alphabetical sort")
         verify(u16(record, 0x1A) == laserman_powers[index], f"{label} LaserMan {index} power")
         verify(record[0x1C:0x20] == original_record[0x1C:0x20], f"{label} LaserMan {index} library metadata")
         verify(u32(record, 0x20) == symbol("LaserManIcon"), f"{label} LaserMan {index} icon")
@@ -458,7 +475,7 @@ def verify_version(
     verify(jealousy_record[4:8] == b"\x00\x03\x0A\x00", f"{label} Jealousy rank/element/class")
     verify(jealousy_record[8:0x10] == b"\x3C\x43\x8A\x15\x07\x0A\x04\x00", f"{label} Jealousy MB/behavior")
     verify(jealousy_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x00\x80\x10", f"{label} Jealousy parameters")
-    verify(u16(jealousy_record, 0x18) == 0x008A, f"{label} Jealousy alphabetical sort")
+    verify(u16(jealousy_record, 0x18) == expected_sorts[0x0BF], f"{label} Jealousy alphabetical sort")
     verify(u16(jealousy_record, 0x1A) == 80, f"{label} Jealousy power")
     verify(u16(jealousy_record, 0x1C) == 0x00C3, f"{label} Jealousy library position")
     verify(jealousy_record[0x1E:0x20] == b"\x01\xFF", f"{label} Jealousy gate/dark ID")
@@ -470,7 +487,7 @@ def verify_version(
     verify(bugchain_record[4:8] == b"\x00\x03\x0A\x00", f"{label} BugChain rank/element/class")
     verify(bugchain_record[8:0x10] == b"\x3B\x41\x00\x15\x22\x0A\x04\x00", f"{label} BugChain MB/behavior")
     verify(bugchain_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\xC2\x80\x01", f"{label} BugChain parameters/library")
-    verify(u16(bugchain_record, 0x18) == 0x006E, f"{label} BugChain alphabetical sort")
+    verify(u16(bugchain_record, 0x18) == expected_sorts[0x0BE], f"{label} BugChain alphabetical sort")
     verify(u16(bugchain_record, 0x1A) == 0, f"{label} BugChain support-chip power")
     verify(u16(bugchain_record, 0x1C) == 0x00C2, f"{label} BugChain library position")
     verify(bugchain_record[0x1E:0x20] == b"\x03\xFF", f"{label} BugChain gate/dark ID")
@@ -483,7 +500,12 @@ def verify_version(
         f"{label} complete BN6 BugFix byte-property list",
     )
 
-    verify(output[BUGFIX_RECORD:BUGFIX_RECORD + 0x2C] == original[BUGFIX_RECORD:BUGFIX_RECORD + 0x2C], f"{label} native BugFix record")
+    verify(
+        output[BUGFIX_RECORD:BUGFIX_RECORD + 0x18] == original[BUGFIX_RECORD:BUGFIX_RECORD + 0x18]
+        and output[BUGFIX_RECORD + 0x1A:BUGFIX_RECORD + 0x2C]
+        == original[BUGFIX_RECORD + 0x1A:BUGFIX_RECORD + 0x2C],
+        f"{label} native BugFix record outside alphabetical sort",
+    )
     verify(output[0x2CD1C:0x2CD20] == original[0x2CD1C:0x2CD20], f"{label} native BugFix time-freeze dispatch")
     verify(output[0x43B4:0x43B8] == original[0x43B4:0x43B8], f"{label} native BugFix type-4 dispatch")
 
@@ -496,7 +518,7 @@ def verify_version(
         f"{label} BugCharge MB/behavior",
     )
     verify(bugcharge_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x05\x14\x00", f"{label} BugCharge parameters/library")
-    verify(u16(bugcharge_record, 0x18) == 0x0197, f"{label} BugCharge alphabetical sort")
+    verify(u16(bugcharge_record, 0x18) == expected_sorts[0x131], f"{label} BugCharge alphabetical sort")
     verify(u16(bugcharge_record, 0x1A) == 200, f"{label} BN5 BugCharge per-shot power")
     verify(u16(bugcharge_record, 0x1C) == 0x0131, f"{label} BugCharge Giga library position")
     verify(bugcharge_record[0x1E:0x20] == b"\x01\xFF", f"{label} BugCharge gate/dark ID")
@@ -515,12 +537,18 @@ def verify_version(
         f"{label} BN5 BugCharge non-boolean byte-property list",
     )
 
-    verify(output[BASS_RECORD:BASS_RECORD + 0x2C] == original[BASS_RECORD:BASS_RECORD + 0x2C], f"{label} Bass record")
+    verify(
+        output[BASS_RECORD:BASS_RECORD + 0x18] == original[BASS_RECORD:BASS_RECORD + 0x18]
+        and output[BASS_RECORD + 0x1A:BASS_RECORD + 0x2C]
+        == original[BASS_RECORD + 0x1A:BASS_RECORD + 0x2C],
+        f"{label} Bass record outside alphabetical sort",
+    )
     verify(output[0x2CDC4:0x2CDC8] == original[0x2CDC4:0x2CDC8], f"{label} Bass dispatch")
     chaos_record = output[CHAOSLORD_RECORD:CHAOSLORD_RECORD + 0x2C]
     verify(chaos_record[:4] == b"\x17\xFF\xFF\xFF", f"{label} ChaosLrd code")
     verify(chaos_record[5] == 4 and chaos_record[6] == 0x0A, f"{label} ChaosLrd rank/element")
     verify(chaos_record[8] == 0x63 and chaos_record[0x0B] == 0x1B and chaos_record[0x0C] == 0x17, f"{label} ChaosLrd type")
+    verify(u16(chaos_record, 0x18) == expected_sorts[0x12E], f"{label} ChaosLrd alphabetical sort")
     verify(u16(chaos_record, 0x1A) == 500 and u16(chaos_record, 0x1C) == 0x12E, f"{label} ChaosLrd power/ID")
     verify(chaos_record[9] == (0x43 if replace_chaos_art else 0x03), f"{label} ChaosLrd library flags")
     if replace_chaos_art:
@@ -544,7 +572,7 @@ def verify_version(
         f"{label} SignalRed MB/behavior",
     )
     verify(signalred_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x14\xC6\x40", f"{label} SignalRed parameters/library")
-    verify(u16(signalred_record, 0x18) == 0x0141, f"{label} SignalRed alphabetical sort")
+    verify(u16(signalred_record, 0x18) == expected_sorts[0x0C1], f"{label} SignalRed alphabetical sort")
     verify(u16(signalred_record, 0x1A) == 0, f"{label} SignalRed displayed power")
     verify(u16(signalred_record, 0x1C) == 0x00C6, f"{label} SignalRed Standard library position")
     verify(signalred_record[0x1E:0x20] == b"\x01\xFF", f"{label} SignalRed gate/dark ID")
@@ -572,7 +600,7 @@ def verify_version(
         f"{label} FolderBack MB/behavior route",
     )
     verify(folderback_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x0D\x10\x00", f"{label} FolderBack parameters/library")
-    verify(u16(folderback_record, 0x18) == 0x00CD, f"{label} FolderBack alphabetical sort")
+    verify(u16(folderback_record, 0x18) == expected_sorts[0x139], f"{label} FolderBack alphabetical sort")
     verify(u16(folderback_record, 0x1A) == 0, f"{label} FolderBack support-chip power")
     verify(u16(folderback_record, 0x1C) == 0x0139, f"{label} FolderBack library position")
     verify(folderback_record[0x1E:0x20] == b"\x01\xFF", f"{label} FolderBack gate/dark ID")
@@ -777,7 +805,10 @@ def verify_version(
         f"{label} DeathPhoenix family",
     )
     verify(death_record[0x10:0x18] == b"\x00\x00\x00\x00\x00\x00\x00\x10", f"{label} DeathPhoenix parameters")
-    verify(u16(death_record, 0x18) == 0x54 and u16(death_record, 0x1A) == 150, f"{label} DeathPhoenix sort/power")
+    verify(
+        u16(death_record, 0x18) == expected_sorts[0x134] and u16(death_record, 0x1A) == 150,
+        f"{label} DeathPhoenix sort/power",
+    )
     verify(u16(death_record, 0x1C) == 0x134, f"{label} DeathPhoenix library position")
     if replace_deathphoenix_art:
         for field, target, source, length in (
@@ -1111,6 +1142,10 @@ def verify_version(
         interval(0x12010, 8), interval(dust_suction_table_reference, 4),
     ]
     allowed_ranges.append(interval(0x120116 if label == "Falzar" else 0x121EF2, 2))
+    allowed_ranges.extend(
+        interval(CHIP_DATA_OFFSET + chip_id * CHIP_RECORD_SIZE + CHIP_SORT_OFFSET, 2)
+        for chip_id in expected_sorts
+    )
     allowed_ranges.extend(interval(reference, 4) for reference in song_table_references)
     allowed_ranges.extend((
         interval(0x2CDA0, 4), interval(0x3CA0, 4), interval(0x44CC, 8),
