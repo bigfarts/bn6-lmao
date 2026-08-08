@@ -43,6 +43,20 @@ def rom_offset(address: int) -> int:
     return address - 0x08000000
 
 
+def contains_thumb_bl(data: bytes, start: int, end: int, target: int) -> bool:
+    """Return whether an ARMv4T Thumb BL in the ROM interval reaches target."""
+    for offset in range(start, end - 3, 2):
+        high, low = struct.unpack_from("<HH", data, offset)
+        if high & 0xF800 != 0xF000 or low & 0xF800 != 0xF800:
+            continue
+        displacement = ((high & 0x07FF) << 12) | ((low & 0x07FF) << 1)
+        if displacement & 0x400000:
+            displacement -= 0x800000
+        if 0x08000000 + offset + 4 + displacement == target:
+            return True
+    return False
+
+
 def archive_entries(data: bytes, offset: int) -> list[bytes]:
     entry_count = u16(data, offset) // 2
     offsets = struct.unpack_from(f"<{entry_count}H", data, offset)
@@ -164,18 +178,18 @@ def verify_version(
                 (0x12, "ChaosAuraSprite", True),
                 (0x13, "ChaosBassSprite", False),
             ),
-            None,
+            (),
         ),
         (
             0x31CD0, "ImportedSpriteGroup0CTable", 0x31E00, 0x1A4,
             (
-                (0x20, "BugChargeProjectileSprite", False),
+                (0x20, "BugChargeChargeSprite", False),
                 (0x56, "LaserManBattleSprite", True),
                 (0x57, "DeathPhoenixBattleSprite", False),
                 (0x5A, "RollArrowActorSprite", False),
                 (0x5B, "RollArrowProjectileSprite", False),
             ),
-            None,
+            (),
         ),
         (
             0x31CD4, "ImportedSpriteGroup10Table", 0x31FA4, 0x170,
@@ -186,7 +200,7 @@ def verify_version(
                 (0x18, "ChaosApparitionSprite", False),
                 (0x1E, "SignalRedBattleSprite", False),
             ),
-            "BugChainBattleSprite",
+            ("BugChainBattleSprite", "BugChargeGospelSprite"),
         ),
         (
             0x31CD8, "ImportedSpriteGroup14Table", 0x32114, 0x80,
@@ -194,7 +208,7 @@ def verify_version(
                 (0x14, "ChaosImpactSprite", False),
                 (0x17, "DeathPhoenixStrikeSprite", False),
             ),
-            None,
+            (),
         ),
     )
     for root_offset, table_name, original_offset, native_length, entries, appended in sprite_tables:
@@ -208,16 +222,16 @@ def verify_version(
             output[table:table + native_length] == expected,
             f"{label} {table_name} preserves native and imported pointers",
         )
-        if appended is not None:
+        for append_index, target in enumerate(appended):
             verify(
-                u32(output, table + native_length) == symbol(appended),
-                f"{label} {table_name} appended {appended} pointer",
+                u32(output, table + native_length + append_index * 4) == symbol(target),
+                f"{label} {table_name} appended {target} pointer",
             )
     verify(
         output[0x31DA4:0x32194] == original[0x31DA4:0x32194],
         f"{label} original sprite tables remain unmodified",
     )
-    bugcharge_sprite = rom_offset(symbol("BugChargeProjectileSprite"))
+    bugcharge_sprite = rom_offset(symbol("BugChargeChargeSprite"))
     verify(
         output[bugcharge_sprite:bugcharge_sprite + 12]
         == b"\x10\x00\x01\x03\x0C\x00\x00\x00\x70\x00\x00\x00",
@@ -405,7 +419,8 @@ def verify_version(
         ("BugChargeIcon", 0x74AE3C, 0x80, "BugCharge icon"),
         ("BugChargeImage", 0x730664, 0x540, "BugCharge image"),
         ("BugChargePalette", 0x735D64, 0x20, "BugCharge palette"),
-        ("BugChargeProjectileSprite", 0x322158, 0x8EC, "BugCharge charge/Gospel archive"),
+        ("BugChargeChargeSprite", 0x322158, 0x8EC, "BugCharge charge-orbit archive"),
+        ("BugChargeGospelSprite", 0x348030, 0x6A8, "BugCharge Gospel-head archive"),
     ]
     for target, source_offset, length, description in bugcharge_assets:
         start = rom_offset(symbol(target))
@@ -791,11 +806,24 @@ def verify_version(
     verify(struct.pack("<I", symbol("ROLLARROW_PROJECTILE_TAG")) in search_code, f"{label} RollArrow type-3 tag")
     verify(struct.pack("<I", symbol("BugChargeProjectileMain") + 1) in search_code, f"{label} BugCharge tagged type-3 route")
     verify(struct.pack("<I", symbol("BUGCHARGE_PROJECTILE_TAG")) in search_code, f"{label} BugCharge type-3 tag")
+    verify(struct.pack("<I", symbol("LaserManHitMain") + 1) in search_code, f"{label} LaserMan tagged type-3 route")
+    verify(struct.pack("<I", symbol("LASERMAN_HIT_TAG")) in search_code, f"{label} LaserMan type-3 tag")
+    verify(struct.pack("<I", symbol("BugChargeGospelMain") + 1) in search_code, f"{label} BugCharge Gospel visual route")
+    verify(struct.pack("<I", symbol("BUGCHARGE_GOSPEL_TAG")) in search_code, f"{label} BugCharge Gospel visual tag")
     verify(
         b"\x01\xB4\x30\x1C\x00\x0C\x94\x28\x01\xBC" in search_code,
         f"{label} RollArrow packed-attack discriminator",
     )
     verify(chaos_code and any(byte != 0xFF for byte in chaos_code), f"{label} ChaosLrd code")
+    verify(
+        contains_thumb_bl(
+            output,
+            rom_offset(symbol("ChaosAttackMain")),
+            rom_offset(symbol("ChaosAttackInit")),
+            symbol("SignalRedObjectMain"),
+        ),
+        f"{label} ChaosLrd preserves SignalRed shared type-3 route",
+    )
     verify(
         output[rom_offset(symbol("ChaosSetCompletionActive")):rom_offset(symbol("ChaosSetCompletionActive")) + 2]
         == b"\x39\x70",
@@ -821,6 +849,12 @@ def verify_version(
     )
     verify(jealousy_code and any(byte != 0xFF for byte in jealousy_code), f"{label} Jealousy code")
     verify(bugchain_code and any(byte != 0xFF for byte in bugchain_code), f"{label} BugChain code")
+    verify(struct.pack("<I", symbol("BUGCHAIN_TAG")) in bugchain_code, f"{label} BugChain controller tag")
+    verify(struct.pack("<I", symbol("BUGCHAIN_VISUAL_TAG")) in bugchain_code, f"{label} BugChain visual tag")
+    verify(
+        struct.pack("<I", symbol("JealousyMain") + 1) in bugchain_code,
+        f"{label} BugChain preserves Jealousy shared type-4 route",
+    )
     for target in (0x080005CD, 0x0802D247):
         verify(struct.pack("<I", target) in bugchain_code, f"{label} BugChain runtime target 0x{target:08X}")
     verify(b"\x08\x21\x08\x42" in bugchain_code, f"{label} BugChain link-battle flag test")
@@ -828,11 +862,11 @@ def verify_version(
     verify(b"\xE0\x20\xFF\x30" in bugchain_code, f"{label} BugChain imported SFX 0x1DF")
     verify(bugcharge_code and any(byte != 0xFF for byte in bugcharge_code), f"{label} BugCharge code")
     for target in (
-        0x080005CD, 0x080026A5, 0x080026E5, 0x08002DA5,
+        0x080005CD, 0x080026A5, 0x080026E5, 0x08002D81, 0x08002DA5,
         0x08003359, 0x080033AD, 0x08003459, 0x0800A18F, 0x0800CC87,
-        0x0800E277, 0x0800E29D, 0x080103BD, 0x08013683,
+        0x0800E29D, 0x080103BD, 0x08013683,
         0x08019893, 0x080198CF, 0x08019FB5, 0x0801A00F, 0x0801A019,
-        0x0801A075, 0x0801A0D5, 0x0801A141, 0x0801A259, 0x0801BBF5,
+        0x0801A075, 0x0801A0D5, 0x0801A141, 0x0801BBF5,
         0x080302A9,
     ):
         verify(struct.pack("<I", target) in bugcharge_code, f"{label} BugCharge runtime target 0x{target:08X}")

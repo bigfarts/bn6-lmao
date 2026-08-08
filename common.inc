@@ -97,6 +97,7 @@
 // Keep this tag global because SearchMan's dispatcher is assembled before the
 // BugCharge implementation that owns the object.
 .definelabel BUGCHARGE_PROJECTILE_TAG,   0x50434742 // "BGCP"
+.definelabel BUGCHARGE_GOSPEL_TAG,       0x47434742 // "BGCG"
 
 // Battle-effect helpers used by BN5's dormant ChaosLord Ball Bass object.
 // These are the matching BN6 implementations, identified by their complete

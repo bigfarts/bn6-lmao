@@ -810,8 +810,14 @@ SearchManHitMain:
 @@bugcharge:
     ldr r1,=BUGCHARGE_PROJECTILE_TAG
     cmp r0,r1
-    bne @@laser
+    bne @@bugcharge_gospel
     ldr r0,=BugChargeProjectileMain + 1
+    bx r0
+@@bugcharge_gospel:
+    ldr r1,=BUGCHARGE_GOSPEL_TAG
+    cmp r0,r1
+    bne @@laser
+    ldr r0,=BugChargeGospelMain + 1
     bx r0
 @@laser:
     ldr r1,=0x4C484954                  // LaserMan's tagged type-3 row hit

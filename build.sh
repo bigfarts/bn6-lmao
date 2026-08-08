@@ -139,11 +139,13 @@ done
 
 # BugCharge replaces BugFix while retaining its StandardChip class and library
 # slot. BugCharge is Colonel-exclusive, so source its real menu art from the
-# Team Colonel record. Group 0x0C/index 0x44 is the shared charge-orbit archive.
+# Team Colonel record. Group 0x0C/index 0x44 is the shared charge-orbit archive,
+# while group 0x10/index 0x13 is the Gospel head used by the actual shot.
 dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-icon.bin" bs=1 skip=$((0x74AE3C)) count=$((0x80)) 2>/dev/null
 dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-image.bin" bs=1 skip=$((0x730664)) count=$((0x540)) 2>/dev/null
 dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-palette.bin" bs=1 skip=$((0x735D64)) count=$((0x20)) 2>/dev/null
-dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-projectile-sprite.bin" bs=1 skip=$((0x322158)) count=$((0x8EC)) 2>/dev/null
+dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-charge-sprite.bin" bs=1 skip=$((0x322158)) count=$((0x8EC)) 2>/dev/null
+dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-gospel-sprite.bin" bs=1 skip=$((0x348030)) count=$((0x6A8)) 2>/dev/null
 dd if="$BN5_COLONEL_ROM" of="$BUILD_DIR/bugcharge-charge-sample.bin" bs=1 skip=$((0x191A80)) count=$((0x676)) 2>/dev/null
 
 # RollArrow1/2/3 replace TrainArrow1/2/3 in both versions. Runtime tracing in

@@ -32,13 +32,13 @@ ImportedSpriteGroup08Table:
 ImportedSpriteGroup08TableEnd:
 .endautoregion
 
-// Group 0x0C has 105 native entries. BugCharge's BN5 archive is already
-// uncompressed; only LaserMan retains the high compression bit.
+// Group 0x0C has 105 native entries. BugCharge's BN5 charge-orbit archive is
+// already uncompressed; only LaserMan retains the high compression bit.
 .autoregion
 .align 4
 ImportedSpriteGroup0CTable:
 .incbin "build/sprite-group0C-table.bin",0,0x80
-.dw BugChargeProjectileSprite               // index 0x20
+.dw BugChargeChargeSprite                   // index 0x20
 .incbin "build/sprite-group0C-table.bin",0x84,0xD4
 .dw LaserManBattleSprite | 0x80000000       // index 0x56, compressed
 .dw DeathPhoenixBattleSprite                // index 0x57
@@ -49,7 +49,8 @@ ImportedSpriteGroup0CTable:
 ImportedSpriteGroup0CTableEnd:
 .endautoregion
 
-// Group 0x10 has 92 native entries. Append BugChain at the new index 0x5C.
+// Group 0x10 has 92 native entries. Append BugChain and the BN5 BugCharge
+// Gospel-head archive at the new indices 0x5C and 0x5D.
 .autoregion
 .align 4
 ImportedSpriteGroup10Table:
@@ -64,6 +65,7 @@ ImportedSpriteGroup10Table:
 .dw SignalRedBattleSprite                   // index 0x1E
 .incbin "build/sprite-group10-table.bin",0x7C,0xF4
 .dw BugChainBattleSprite                    // index 0x5C
+.dw BugChargeGospelSprite                   // index 0x5D
 ImportedSpriteGroup10TableEnd:
 .endautoregion
 

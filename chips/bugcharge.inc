@@ -128,7 +128,7 @@ BugChargeEffectUpdate:
     strh r0,[r5,0x22]
     bge @@done
     bl BugChargePlayFireSound
-    bl BugChargeSpawnNativeAttack
+    bl BugChargeSpawnGospel
     bl BugChargeAttackRow
     mov r0,2
     mov r1,20
@@ -394,36 +394,43 @@ BugChargeOrbitSetPosition:
     pop {r4,r6,r7,pc}
     .pool
 
-// BN5's firing state does not create a private projectile object. It places
-// attack-family kind 1 one panel in front of the user, using fixed-point X/Y
-// coordinates and a 20-pixel Z origin. BN6 retains the same generic damage
-// object family; only its version-specific wrapper address moved.
-BugChargeSpawnNativeAttack:
-    push {r4,r6,lr}
+// BN5 attack-family kind 1 uses group 0x10/index 0x13: the Gospel head. BN6's
+// object at the corresponding generic slot is a Django effect, so give the
+// imported archive its own tagged visual object instead of invoking that BN6
+// family. Each head begins one panel ahead and flies through the user's row.
+BugChargeSpawnGospel:
+    push {r4,r6,r7,lr}
     EngineCall OBJECT_FRONT_DIRECTION
     ldrb r1,[r5,0x12]
     add r0,r0,r1
     ldrb r1,[r5,0x13]
-    EngineCall PANEL_TO_COORDS
-    mov r2,r1
-    mov r1,r0
-    mov r3,20
-    lsl r3,r3,16
-    ldr r6,[r5,0x2C]
-    mov r4,1
-.if FALZAR
-    EngineCall 0x080C53A6
-.else
-    EngineCall 0x080C6C16
-.endif
-    pop {r4,r6,pc}
+    push {r0-r1,r5}
+    mov r0,0x2C
+    mov r4,25
+    EngineCall SPAWN_TYPE3
+    mov r4,r5
+    pop {r0-r1,r5}
+    cmp r4,0
+    beq @@done
+    strb r0,[r4,0x12]
+    strb r1,[r4,0x13]
+    ldrh r0,[r5,0x16]
+    strh r0,[r4,0x16]
+    ldr r0,[r5,0x2C]
+    str r0,[r4,0x2C]
+    str r5,[r4,0x4C]
+    ldr r0,=BUGCHARGE_GOSPEL_TAG
+    str r0,[r4,0x78]
+    ldrb r0,[r4]
+    mov r1,0x10
+    orr r0,r1
+    strb r0,[r4]
+@@done:
+    pop {r4,r6,r7,pc}
     .pool
 
-// BN6's retained generic attack wrapper takes panel coordinates for its
-// damage contact, whereas BN5's wrapper accepted the fixed-point launch
-// coordinates used above. Apply the same kind-1 contact to each valid panel
-// in the user's row; the separately spawned native attack object supplies the
-// moving Gospel visual while these contacts preserve the row hit semantics.
+// Apply the same kind-1 contact to each valid panel in the user's row. The
+// tagged visual object above independently supplies the Gospel-head animation.
 BugChargeAttackRow:
     push {r4,r6,r7,lr}
     ldrb r0,[r5,0x16]
@@ -481,38 +488,7 @@ BugChargeHitSpawn:
     pop {r4,r6,r7,pc}
     .pool
 
-// ----- Tagged type-3 Gospel shot -----------------------------------------
-
-BugChargeSpawnProjectile:
-    push {r4,r6,lr}
-    ldrb r0,[r5,0x12]
-    ldrb r1,[r5,0x13]
-    ldrb r2,[r5,0x0E]
-    ldr r6,[r5,0x2C]
-    push {r0-r2,r5}
-    mov r0,0x2C
-    mov r4,25                         // BN6 normal attack collision region
-    EngineCall SPAWN_TYPE3
-    mov r4,r5
-    pop {r0-r2,r5}
-    cmp r4,0
-    beq @@done
-    strb r0,[r4,0x12]
-    strb r1,[r4,0x13]
-    strb r2,[r4,0x0E]
-    ldrh r0,[r5,0x16]
-    strh r0,[r4,0x16]
-    str r6,[r4,0x2C]
-    str r5,[r4,0x4C]
-    ldr r0,=BUGCHARGE_PROJECTILE_TAG
-    str r0,[r4,0x78]
-    ldrb r0,[r4]
-    mov r1,0x10
-    orr r0,r1
-    strb r0,[r4]
-@@done:
-    pop {r4,r6,pc}
-    .pool
+// ----- Tagged type-3 row contacts and Gospel-head visuals ---------------
 
 BugChargeProjectileMain:
     push {lr}
@@ -545,17 +521,17 @@ BugChargeProjectileInit:
     mov r7,r0
     cmp r0,0
     beq @@free
-    mov r1,0x4E                       // BN5 Gospel collision region
-    mov r2,0x14                       // BN5 Gospel collision category
+    // Translate BN5's attack-family kind-1 contact to the corresponding BN6
+    // generic-attack collision IDs. BN5's numeric IDs describe different
+    // handlers when passed directly to BN6.
+    mov r1,0x0A
+    mov r2,5
     mov r3,3
     EngineCall COLLISION_SETUP
-    mov r0,0xFF
+    mov r1,1
+    strb r1,[r7,1]
+    mov r0,1
     EngineCall COLLISION_SET_HIT_EFFECT
-    // BN5 kind 1 writes zero to collision property 0x10, then clears the
-    // collision's one-contact latch before presenting it.
-    mov r0,0
-    EngineCall 0x0801A258
-    EngineCall COLLISION_CLEAR_REGION
     EngineCall COLLISION_PRESENT
     mov r0,4
     str r0,[r5,0x08]
@@ -576,10 +552,90 @@ BugChargeProjectileUpdate:
     pop {pc}
     .pool
 
+BugChargeGospelMain:
+    push {lr}
+    ldrb r0,[r5,0x08]
+    cmp r0,0
+    beq @@init
+    cmp r0,4
+    beq @@update
+    EngineCall OBJECT_FREE
+    pop {pc}
+@@init:
+    bl BugChargeGospelInit
+    b @@animate
+@@update:
+    bl BugChargeGospelUpdate
+@@animate:
+    EngineCall OBJECT_UPDATE_TIMESTOP
+    pop {pc}
+
+BugChargeGospelInit:
+    push {lr}
+    EngineCall BATTLE_IS_OVER
+    cmp r0,0
+    bne @@free
+    EngineCall OBJECT_SET_COORDS
+    mov r0,0x20                       // exact BN5 Gospel Z origin
+    lsl r0,r0,16
+    str r0,[r5,0x3C]
+    mov r0,0x80
+    mov r1,0x10
+    mov r2,0x5D
+    EngineCall SPRITE_LOAD
+    EngineCall SPRITE_LOAD_ANIM_DATA
+    EngineCall SPRITE_NO_SHADOW
+    mov r0,2                          // exact BN5 Gospel animation
+    strb r0,[r5,0x10]
+    strb r0,[r5,0x11]
+    EngineCall SPRITE_SET_ANIMATION
+    EngineCall SPRITE_LOAD_ANIM_DATA
+    mov r0,1                          // attack-family kind-1 palette
+    EngineCall SPRITE_SET_PALETTE
+    EngineCall OBJECT_GET_FLIP
+    EngineCall SPRITE_SET_FLIP
+    ldrb r0,[r5]
+    mov r1,2
+    orr r0,r1
+    strb r0,[r5]
+    EngineCall OBJECT_FRONT_DIRECTION
+    mov r1,8                          // cross one 40-pixel panel in five frames
+    mul r0,r1
+    lsl r0,r0,16
+    str r0,[r5,0x40]
+    mov r0,29                         // long enough to clear the six-panel row
+    strh r0,[r5,0x20]
+    mov r0,4
+    str r0,[r5,0x08]
+    pop {pc}
+@@free:
+    EngineCall OBJECT_FREE
+    pop {pc}
+    .pool
+
+BugChargeGospelUpdate:
+    push {lr}
+    EngineCall BATTLE_IS_OVER
+    cmp r0,0
+    bne @@free
+    ldrh r0,[r5,0x20]
+    sub r0,1
+    strh r0,[r5,0x20]
+    blt @@free
+    ldr r1,[r5,0x40]
+    ldr r0,[r5,0x34]
+    add r0,r0,r1
+    str r0,[r5,0x34]
+    pop {pc}
+@@free:
+    EngineCall OBJECT_FREE
+    pop {pc}
+    .pool
+
 BugChargeCodeEnd:
 .endautoregion
 
-// Exact BN5 BugCharge menu art and group-0x0C/index-0x44 archive.
+// Exact BN5 Colonel BugCharge menu art, charge orbits, and Gospel head.
 .autoregion
 .align 4
 BugChargeIcon:
@@ -597,8 +653,13 @@ BugChargePalette:
 .endautoregion
 .autoregion
 .align 4
-BugChargeProjectileSprite:
-    .incbin "build/bugcharge-projectile-sprite.bin"
+BugChargeChargeSprite:
+    .incbin "build/bugcharge-charge-sprite.bin"
+.endautoregion
+.autoregion
+.align 4
+BugChargeGospelSprite:
+    .incbin "build/bugcharge-gospel-sprite.bin"
 .endautoregion
 
 // Exact BN5 charge (SFX 0x94) and per-shot (SFX 0xFF) cues.
